@@ -1,5 +1,5 @@
-# blkhole
 ![alt text](https://github.com/tuefekci/blkhole/raw/main/web/src/logo.png "Logo")
+
 Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent files into a folder and blkhole does the communication with the provider and downloads everything in the appropiate folders.
 
 ### How To
@@ -15,3 +15,8 @@ AllDebrid offer multiple tools to make it easier for you: addon for browsers, st
 No more limitations from the file hosters, enjoy your downloads at full speed!
 
 [Register for AllDebrid with my invite link and support me](https://alldebrid.com/?uid=2rp0k&lang=en)
+
+
+
+### Similar Projects
+- [premiumizer for premiumize](https://github.com/piejanssens/premiumizer)
