@@ -10,6 +10,7 @@ class Controller {
 
     public $downloads = [];
     public $downloadQueue = [];
+    public $downloadsDone = [];
 
     public $paralel = 3;
 
@@ -31,6 +32,7 @@ class Controller {
     }
 
     public function cycle() {
+        // ===============================================================
         // Handle downloadQueue
         if(!empty($this->downloadQueue) && (int)$this->app->config['downloader']['paralel'] > count($this->downloads)) {
             $dlData = $this->downloadQueue[array_key_first($this->downloadQueue)];
@@ -38,11 +40,46 @@ class Controller {
 
             $this->downloads[$dlData['id']] = new Download($this, $dlData['id'], $dlData['path'], $dlData['url'], $dlData['size']);
         }
+
+        // ===============================================================
+        // handle completed downloads
+        if(!empty($this->downloads)) {
+            foreach($this->downloads as $id => $download) {
+                if($download->done) {
+                    $this->downloadsDone[$download->id] = $download;
+                    unset($this->downloads[$download->id]);
+                }
+            }
+        }
     }
+
 
     public function stats() {
         //print_r($this->downloads);
         //echo PHP_EOL;
+    }
+
+    public function get($id) {
+
+        // TODO: This whole situation how downloads are assigned etc. should be reworked.
+
+        if(!empty($this->downloads[$id])) {
+            return $this->downloads[$id];
+        }
+
+        if(!empty($this->downloadsDone[$id])) {
+            return $this->downloadsDone[$id];
+        }
+
+        foreach($this->downloadQueue as $download) {
+            if($download['id'] == $id) {
+                $download['done'] = false;
+                return (object) $download;
+            }
+        }
+
+        return false;
+
     }
 
     public function add($id, $path, $url, $size=null) {
@@ -51,6 +88,13 @@ class Controller {
 
     public function remove($id) {
         unset($this->downloads[$id]);
+        unset($this->downloadsDone[$id]);
+
+        foreach($this->downloadQueue as $key => $download) {
+            if($download['id'] == $id) {
+                unset($this->downloadQueue[$key]);
+            }
+        }
     }
 
 }

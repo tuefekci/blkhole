@@ -94,18 +94,36 @@ class Alldebrid extends ProviderInterface {
     }
 
     public function delete($id) {
-        //https://api.alldebrid.com/v4/magnet/delete?agent=myAppName&apikey=someValidApikeyYouGenerated&id=MAGNETID
-        return $this->app->browserGet($this->apiUrl."magnet/delete?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id)->then(function($response) {
-            
-            $data = json_decode($response->body);
 
-            if($data->status == "success") {
-                return $data->data;
+        //https://api.alldebrid.com/v4/magnet/delete?agent=myAppName&apikey=someValidApikeyYouGenerated&id=MAGNETID
+        $deferred = new \Amp\Deferred;
+
+
+        $app = $this->app;
+ 
+        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/delete?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id);
+
+        $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
+
+            if ($error) {
+                $app->error("getStatus->request", $error->getMessage());
+            } else {
+
+                $data = yield $response->getBody()->buffer();
+                $data = json_decode($data);
+
+                if($data->status == "success") {
+                    $deferred->resolve($data->data);
+                } else {
+                    $deferred->fail(new \Throwable("Delete failed."));
+                }
+
             }
 
-        }, function ($e) use ($id) {
-            $this->app->error($e->getMessage(), "Alldebrid->delete(".$id.")");
         });
+
+        return $deferred->promise();
     }
 
     public function restart($id) {

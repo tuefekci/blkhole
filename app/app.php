@@ -82,46 +82,25 @@ class App {
         $this->downloader = $downloader;
 
         // =================================================================
-        // loop
-
-        /*
-        $this->loop->addPeriodicTimer(30, function () {
-            // Read Files
-            // Upload to Provider
-            // Check Provider
-            // Download
-            // Remove Task/Download
-        });
-        */
-
-        /*
-        $downloader->add("test1", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        $downloader->add("test2", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        $downloader->add("test3", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        $downloader->add("test4", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        $downloader->add("test5", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        $downloader->add("test6", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-
-*/
-
+        // loops
         Loop::repeat($msInterval = 1000, function () {
             //var_dump($this->torrents);
             //var_dump($this->magnets);
         });
 
-        $this->checkFiles();
-        Loop::repeat($msInterval = 10000, function () {
+        \Amp\Loop::repeat($msInterval = 10000, function () use ($provider) {
+            $provider->getStatus();
+        });
+
+        \Amp\Loop::repeat($msInterval = 15000, function () {
             $this->checkFiles();
         });
 
-        \Amp\Loop::repeat($msInterval = 5000, function ($watcherId) use ($provider) {
-            $provider->getStatus();
-
+        \Amp\Loop::repeat($msInterval = 5000, function () {
             $this->handleMagnets();
-
             $this->checkProvider();
+            $this->checkDownload();
         });
-
 
         /*
         Loop::repeat($msInterval = 3000, function () {
@@ -140,8 +119,47 @@ class App {
         // =================================================================
     }
 
+    // Check Downloads for completed downloads and then clean up!
+    private function checkDownload() {
 
+        foreach($this->magnets as $path => $magnet) {
+            if(!empty($magnet['downloads'])) {
+
+                $check = array();
+
+                foreach($magnet['downloads'] as $dlId) {
+                    $download = $this->downloader->get($dlId);
+                    $check[] = $download->done;
+                }
+
+
+                if(!in_array(false, $check, true)) {
+                    // remove magnet and complete downloads etc.
+
+                    $this->filesystem->deleteFile($path);
+                    unset($this->magnets[$path]);
+
+                    // remove downloads
+                    foreach($magnet['downloads'] as $dlId) {
+                        $download = $this->downloader->remove($dlId);
+                    }
+
+                    // remove from provider
+                    $this->provider->delete($magnet['provider']->id);
+                }
+                
+
+
+
+            }
+        }
+
+    }
+
+
+    // Check Provider if files are availble for download to disk.
     private function checkProvider() {
+
         $_this = $this;
 
         foreach($this->provider->status() as $status) {
@@ -189,6 +207,7 @@ class App {
     }
 
 
+    // send magnets to Provider for download to cloud.
     private function handleMagnets() {
 
         $_this = $this;
@@ -218,6 +237,8 @@ class App {
 
     }
 
+
+    // check blackhole for magnets and torrents
     private function checkFiles() {
         $this->info(__BLACKHOLE__, "checkFiles->blackhole");
 
