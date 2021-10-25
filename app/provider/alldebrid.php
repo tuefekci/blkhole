@@ -9,8 +9,7 @@ class Alldebrid extends ProviderInterface {
     public $apiKey;
     public $apiUrl;
 
-    public $status;
-    public $downloadLinks;
+    public array $status = array();
 
     public function __construct($app) {
         parent::__construct($app);
@@ -59,82 +58,39 @@ class Alldebrid extends ProviderInterface {
 
     }
 
-    public function getDownload($id) {
+    public function getDownload($link) {
 
-        /*
-        if(empty($this->status)) {
-            return \React\Promise\reject();
-        }
 
-        $status = $this->status[$id];
+        $deferred = new \Amp\Deferred;
 
-        $pending = [];
+        $app = $this->app;
+ 
+        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $request = new \Amp\Http\Client\Request($this->apiUrl."link/unlock?agent=".$this->agent ."&apikey=".$this->apiKey."&link=".urlencode($link));
 
-        if(empty($status->links)) {
-            return \React\Promise\reject();
-        } else {
-            foreach($status->links as $link) {
+        $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred, $link) {
 
-                $pending[] = $this->app->browserGet($this->apiUrl."link/unlock?agent=".$this->agent ."&apikey=".$this->apiKey."&link=".urlencode($link->link))->then(function($response) use ($id) {
+            if ($error) {
+                $app->error("getDownload->request", $error->getMessage());
+            } else {
+                $data = yield $response->getBody()->buffer();
+                $data = json_decode($data);
 
-                    $data = json_decode($response->body);
-        
-                    if($data->status == "success") {
-                        $this->app->info($data->status, "Alldebrid->getDownload(".$id.")");
+                if($data->status == "success") {
+                    $app->info($data->status, "Alldebrid->getDownload(".$link.")");
 
-                        if(isset($data->data->delayed)) {
-
-                            $this->app->loop->addPeriodicTimer(5, function ($timer) use ($id, $data) {
-                                // https://api.alldebrid.com/v4/link/delayed?agent=myAppName&apikey=someValidApikeyYouGenerated&id=ID
-
-                                $pending[] = $this->app->browserGet($this->apiUrl."link/delayed?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".urlencode($data->data->delayed))->then(function($response) use ($id, $timer) {
-                                    $data = json_decode($response->body);
-
-                                    if($data->status == "success") {
-
-                                        $this->app->info($data->data->status, "Alldebrid->getDownloadDelayed");
-
-                                        switch ($data->data->status) {
-                                            case 1:
-                                                // Still generating DL link
-                                                break;
-                                            case 2:
-                                                return $data->data;
-                                                break;
-                                            case 3:
-                                                $this->app->loop->cancelTimer($timer);
-                                                break;
-                                        }
-
-                                    }
-
-                                }, function ($e) use ($id, $timer) {
-                                    $this->app->error($e->getMessage(), "Alldebrid->getDownloadDelayed(".$id.")");
-                                    $this->app->loop->cancelTimer($timer);
-                                });
-
-                            });
-
-                        } else {
-                            return $data->data;
-                        }
-
+                    if(isset($data->data->delayed)) {
+                        $deferred->fail(new \Throwable("Download link delayed."));
                     } else {
-                        $this->app->error($data->status, "Alldebrid->getDownload(".$id.")");
+                        $deferred->resolve($data->data);
                     }
-        
-                }, function ($e) use ($id) {
-                    $this->app->error($e->getMessage(), "Alldebrid->getDownload(".$id.")");
-                });
+                }
 
             }
 
-            return \React\Promise\all($pending)->then(function($resolved) use ($id) {
-                $this->downloadLinks[$id] = $resolved; // [10, 20]
-                return $this->downloadLinks[$id];
-            });
-        }
-*/
+        });
+
+        return $deferred->promise();
     }
 
     public function delete($id) {

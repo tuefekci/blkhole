@@ -36,7 +36,7 @@ class Controller {
             $dlData = $this->downloadQueue[array_key_first($this->downloadQueue)];
             unset($this->downloadQueue[array_key_first($this->downloadQueue)]);
 
-            $this->downloads[$dlData['id']] = new Download($this, $dlData['id'], $dlData['path'], $dlData['url']);
+            $this->downloads[$dlData['id']] = new Download($this, $dlData['id'], $dlData['path'], $dlData['url'], $dlData['size']);
         }
     }
 
@@ -45,8 +45,8 @@ class Controller {
         //echo PHP_EOL;
     }
 
-    public function add($id, $path, $url) {
-        $this->downloadQueue[] = array("id"=>$id, "path"=>$path, "url"=>$url);
+    public function add($id, $path, $url, $size=null) {
+        $this->downloadQueue[] = array("id"=>$id, "path"=>$path, "url"=>$url, "size"=>$size);
     }
 
     public function remove($id) {

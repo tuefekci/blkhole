@@ -23,7 +23,7 @@ class Download {
 
     private $app;
 
-    public function __construct($downloader, $id, $path, $url) {
+    public function __construct($downloader, $id, $path, $url, $size=false) {
 
         $this->app = $downloader->app;
         $this->downloader = $downloader;
@@ -35,6 +35,10 @@ class Download {
         $this->path = $path;
         $this->dir = dirname($path);
         $this->url = $url;
+
+        if($size) {
+            $this->size = $size;
+        }
 
         $this->speedLimit();
 
@@ -60,6 +64,16 @@ class Download {
         });
 
         
+        \Amp\Loop::repeat($msInterval = 10000, function ($watcherId) use ($app) {
+
+            $this->app->info($this->percent."% / speed: ".$this->speedText." / tta: ".$this->timeText , "download->".$this->path);
+
+            if($this->done) {
+                \Amp\Loop::cancel($watcherId);
+            }
+            
+        });
+
         \Amp\Loop::repeat($msInterval = 1000, function ($watcherId) use ($app) {
 
             $this->speedLimit();
@@ -71,8 +85,10 @@ class Download {
             $this->speed = array_sum($this->secDataHistory)/count($this->secDataHistory);
             $this->speedText = $app->filesize_formatted($this->speed);
 
-            $this->time = ($this->size-$this->currentSize)/$this->speed;
-            $this->timeText = gmdate('H:i:s', $this->time);
+            if(!empty($this->size) && !empty($this->currentSize) && !empty($this->speed)) {
+                $this->time = ($this->size-$this->currentSize)/$this->speed;
+                $this->timeText = gmdate('H:i:s', (int) round($this->time));
+            }
 
             if($this->done) {
                 \Amp\Loop::cancel($watcherId);
@@ -116,7 +132,10 @@ class Download {
                     } else {
 
                         $headers = $response->getHeaders();
-                        $this->size = $headers['content-length'][0];
+
+                        if(!empty($headers['content-length'][0])) {
+                            $this->size = $headers['content-length'][0];
+                        }
 
                         $body = $response->getBody();
 
@@ -125,6 +144,7 @@ class Download {
 
                             $this->currentSize += strlen($chunk);
                             $this->secData += strlen($chunk);
+
                             $this->percent = number_format($this->currentSize / $this->size * 100, 0);
 
                             // speed reduction pause
@@ -137,6 +157,8 @@ class Download {
 
                         yield $file->close();
                         $this->done = true;
+
+                        $app->info("completed ".$this->url, "Download");
 
                     }
 

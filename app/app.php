@@ -116,7 +116,10 @@ class App {
 
         \Amp\Loop::repeat($msInterval = 5000, function ($watcherId) use ($provider) {
             $provider->getStatus();
+
             $this->handleMagnets();
+
+            $this->checkProvider();
         });
 
 
@@ -136,6 +139,55 @@ class App {
 
         // =================================================================
     }
+
+
+    private function checkProvider() {
+        $_this = $this;
+
+        foreach($this->provider->status() as $status) {
+
+            foreach($this->magnets as $key => $magnet) {
+
+                if(!empty($magnet['provider']) && empty($magnet['downloads'])) {
+
+                    if($status->id == $magnet['provider']->id) {
+
+                        if(!empty($status->links)) {
+
+                            $this->magnets[$key]['downloads'] = array();
+
+                            foreach($status->links as $link) {
+
+                                // Get Download Link
+                                $this->provider->getDownload($link->link)->onResolve(function ($error, $data) use ($_this, $magnet, $key, $link) {
+                                    if ($error) {
+                                        $_this->error("handleMagnets->addMagnet", $error->getMessage());
+                                    } else {
+
+                                        // Start Download
+                                        $dlId = uniqid($magnet['provider']->id."_");
+                                        $this->downloader->add($dlId, __DOWNLOADS__."/".basename($magnet['dirname'])."/".$magnet['filename']."/".$data->filename, $data->link, $link->size);
+                                        $_this->magnets[$key]['downloads'][] = $dlId;
+                                        
+                                    }
+                                });
+
+
+                            }
+
+                        }
+
+                    }
+
+                }
+
+            }
+
+        }
+
+
+    }
+
 
     private function handleMagnets() {
 
