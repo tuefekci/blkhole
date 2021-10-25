@@ -8,20 +8,23 @@
  */
 require_once(__DIR__ . '/vendor/autoload.php');
 
+use Amp\Http\Client\HttpClientBuilder;
+use Amp\Http\Client\Request;
+use Amp\Loop;
 
 // =================================================================
 // Defines
-define("__ROOT__", __DIR__);
-define("__APP__", __ROOT__."/app");
-define("__DATA__", __ROOT__."/data");
+define("__ROOT__", realpath(__DIR__));
+define("__APP__", realpath(__ROOT__."/app"));
+define("__DATA__", realpath(__ROOT__."/data"));
 
-define("__BLACKHOLE__", __DATA__."/blackhole");
-define("__DOWNLOADS__", __DATA__."/downloads");
+define("__BLACKHOLE__", realpath(__DATA__."/blackhole"));
+define("__DOWNLOADS__", realpath(__DATA__."/downloads"));
 
 
 
-define("__CONF__", __ROOT__."/config");
-define("__PUBLIC__", __ROOT__."/web/public");
+define("__CONF__", realpath(__ROOT__."/config"));
+define("__PUBLIC__", realpath(__ROOT__."/web/build"));
 // =================================================================
 
 // =================================================================
@@ -37,36 +40,8 @@ date_default_timezone_set('Europe/Berlin');
 
 // =================================================================
 // DEV OR NOT DEV!
-$debug = true;
-
-if(!empty(getenv("DEBUG")) && filter_var(getenv("DEBUG"), FILTER_VALIDATE_BOOLEAN)) {
-    $debug = filter_var(getenv("DEBUG"), FILTER_VALIDATE_BOOLEAN);
-}
-
-// In DEV Mode we want full error reporting.
-if($debug) {
-    error_reporting(E_ALL);
-} else {
-    // Todo: Sentry or Logfile Error Reporting
-}
-
-define("DEBUG", $debug);
-
-
-$verbose = true;
-
-if(!empty(getenv("VERBOSE")) && filter_var(getenv("VERBOSE"), FILTER_VALIDATE_BOOLEAN)) {
-    $verbose = filter_var(getenv("VERBOSE"), FILTER_VALIDATE_BOOLEAN);
-}
-
-if(!$verbose) {
-    $options = getopt("v");
-    if(isset($options['v'])) {
-        $verbose = true;
-    }
-}
-
-define("VERBOSE", $verbose);
+error_reporting(E_ALL);
+define("VERBOSE", true);
 // =================================================================
 
 // =================================================================
@@ -81,11 +56,13 @@ spl_autoload_register(function ($class_name) {
 });
 // =================================================================
 
-$app = new GT\BLK\App($loop);
+$app = new GT\BLK\App();
 $web = new GT\BLK\Web($app);
 
 // =================================================================
 // Last Line, start the Loops
-$app->run();
-$web->run();
+Loop::run(function() use ($app, $web) {
+    $app->run();
+    $web->run();
+});
 // =================================================================

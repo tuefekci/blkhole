@@ -1,64 +1,66 @@
 <?php
 
 namespace GT\BLK;
+
+use Amp\Cache\Cache;
+use Amp\Cache\FileCache;
+use Amp\Cache\PrefixCache;
+use Amp\Sync\LocalKeyedMutex;
+
 use Amp\Http\Client\HttpClientBuilder;
 use Amp\Http\Client\Request;
 use Amp\Loop;
-
+use Amp\File\File;
+use Amp\File\Filesystem;
+use function Amp\File\filesystem;
 
 class App {
     public $cli;
-    public $loop;
-    public $store;
     public $config;
 
-    public $filesystem;
-    public $putContentsQueue;
-    public $getContentsQueue;
 
-    public $connector;
-    public $browser;
-    public $browserQueue;
+
+    public PrefixCache $cache;
+    public Filesystem $filesystem;
+
+    public array $torrents = array();
+    public array $magnets = array();
 
     public function __construct() {
+        $app = $this;
 
+        $this->filesystem = filesystem();
         $this->cli = new \League\CLImate\CLImate;
-        $this->filesystem = \React\Filesystem\Filesystem::create($this->loop);
-        $this->store = new \Flintstone\Flintstone('store', ['dir' => __DATA__.'/store']);
         $this->config = \Noodlehaus\Config::load(__CONF__.'/config.ini')->all();
 
-        //var_dump($this->config);
-        //die();
 
         // =================================================================
-        // FileSystem queue
-        $this->putContentsQueue = new \Clue\React\Mq\Queue(10, null, function ($path, $data) {
-            return $this->filesystem->file($path)->putContents($data);
+        // init cache
+        $app->filesystem->exists(__CONF__.'/cache')->onResolve(function ($error, $exists) use ($app) {
+            if ($error) {
+                $app->error("cache->exists", $error->getMessage());
+            } else {
+
+                if($exists) {
+                    $this->cache = new PrefixCache(new FileCache(__CONF__.'/cache', new \Amp\Sync\LocalKeyedMutex()), 'amphp-cache-');
+                } else {
+                    $app->filesystem->createDirectoryRecursively(__CONF__.'/cache')->onResolve(function ($error, $value) use ($app) {
+                        if ($error) {
+                            $app->error("cache->createFolder", $error->getMessage());
+                        } else {
+                            $this->cache = new PrefixCache(new FileCache(__CONF__.'/cache', new \Amp\Sync\LocalKeyedMutex()), 'amphp-cache-');
+                        }
+                    });
+                }
+
+            }
         });
-
-        $this->getContentsQueue = new \Clue\React\Mq\Queue(10, null, function ($path) {
-            return $this->filesystem->file($path)->getContents();
-        });
-        // =================================================================
-
-        // =================================================================
-        // HTTP/Browser
-        /*
-        $this->connector = new \React\Socket\Connector($this->loop, array(
-            'dns' => '8.8.8.8' // DNS? Dont know why it needs to be set but why not.
-        ));
-        $this->browser = new \React\Http\Browser($this->loop, $this->connector);
-        $this->browserQueue = new \Clue\React\Mq\Queue(5, null, function ($url) {
-            return $this->browser->get($url, ['User-Agent'=>"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/89.0.4389.114 Safari/537.36"]);
-        });
-        */
-
-
-        
         // =================================================================
     }
 
     public function run() {
+
+        $app = $this;
 
         $this->cli->clear();
         $this->cli->break();
@@ -69,8 +71,15 @@ class App {
         $this->cli->lightGreen()->border("*");
         $this->cli->lightGreen()->break();
 
-        //$provider = new Provider\Alldebrid($this);
-        //$downloader = new Downloader\Controller($this);
+        // =================================================================
+        // init providers
+        $provider = new Provider\Alldebrid($this);
+        $this->provider = $provider;
+
+        // =================================================================
+        // init downloaders
+        $downloader = new Downloader\Controller($this);
+        $this->downloader = $downloader;
 
         // =================================================================
         // loop
@@ -85,37 +94,124 @@ class App {
         });
         */
 
-        Loop::run(function() {
+        /*
+        $downloader->add("test1", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
+        $downloader->add("test2", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
+        $downloader->add("test3", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
+        $downloader->add("test4", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
+        $downloader->add("test5", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
+        $downloader->add("test6", __DATA__."/downloads/test/".uniqid("test_")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
 
-            Loop::repeat($msInterval = 5000, function () {
-                $this->checkFiles();
-            });
+*/
 
-            //Loop::delay($msDelay = 5000, "Amp\\Loop::stop");
+        Loop::repeat($msInterval = 1000, function () {
+            //var_dump($this->torrents);
+            //var_dump($this->magnets);
         });
+
+        $this->checkFiles();
+        Loop::repeat($msInterval = 10000, function () {
+            $this->checkFiles();
+        });
+
+        \Amp\Loop::repeat($msInterval = 5000, function ($watcherId) use ($provider) {
+            $provider->getStatus();
+            $this->handleMagnets();
+        });
+
+
+        /*
+        Loop::repeat($msInterval = 3000, function () {
+            echo "test3".PHP_EOL;
+        });
+
+        Loop::repeat($msInterval = 4000, function () {
+            echo "test4".PHP_EOL;
+        });
+        */
+
+        //Loop::delay($msDelay = 5000, "Amp\\Loop::stop");
+
+
 
         // =================================================================
     }
 
+    private function handleMagnets() {
+
+        $_this = $this;
+
+        foreach($this->magnets as $path => $magnet) {
+            if(empty($magnet['provider'])) {
+
+                $this->filesystem->read($path)->onResolve(function ($error, $magnet) use ($_this, $path) {
+                    if ($error) {
+                        $this->error("handleMagnets->read", $error->getMessage());
+                    } else {
+
+                        $this->provider->addMagnet($magnet)->onResolve(function ($error, $data) use ($_this, $path) {
+                            if ($error) {
+                                $this->error("handleMagnets->addMagnet", $error->getMessage());
+                            } else {
+                                $_this->magnets[$path]['provider'] = $data;
+                            }
+                        });
+
+                    }
+                });
+
+            }
+        }
+
+
+    }
 
     private function checkFiles() {
         $this->info(__BLACKHOLE__, "checkFiles->blackhole");
 
+        $this->filesystem->listFiles(__BLACKHOLE__)->onResolve(function ($error, $files) {
+            if ($error) {
+                $this->error("torrents", $error->getMessage());
+            } else {
 
-        // Torrents
-        $this->info("torrents", "checkFiles->blackhole->process");
-        foreach (glob(__BLACKHOLE__."/*/*.torrent") as $filename) {
-            echo "$filename - Größe: " . filesize($filename) . "\n";
-        }
+                foreach($files as $file) {
+                    if($this->filesystem->isDirectory(__BLACKHOLE__.DIRECTORY_SEPARATOR.$file)) {
 
-        // Magnets
-        $this->info("magnets", "checkFiles->blackhole->process");
-        foreach (glob(__BLACKHOLE__."/*/*.magnet") as $filename) {
-            echo "$filename - Größe: " . filesize($filename) . "\n";
-        }
+                        $path = __BLACKHOLE__.DIRECTORY_SEPARATOR.$file;
 
-        //__BLACKHOLE__
-        //__DOWNLOADS__
+                        $this->filesystem->listFiles(__BLACKHOLE__.DIRECTORY_SEPARATOR.$file)->onResolve(function ($error, $files) use ($path) {
+                            if ($error) {
+                                $this->error("torrents", $error->getMessage());
+                            } else {
+
+                                foreach($files as $file) {
+
+                                    $filePath = $path.DIRECTORY_SEPARATOR.$file;
+                                    $pathInfo = pathinfo($filePath);
+
+                                    if($pathInfo['extension'] == "magnet") {
+
+                                        if(!isset($this->magnets[$filePath])) {
+                                            $this->magnets[$filePath] = $pathInfo;
+                                        }
+
+                                    }elseif($pathInfo['extension'] == "torrent") {
+                                        
+                                        if(!isset($this->torrents[$filePath])) {
+                                            $this->torrents[$filePath] = $pathInfo;
+                                        }
+
+                                    }
+
+                                }
+
+                            }
+          
+                        });
+                    }
+                }
+            }
+        });
         
     }
 
@@ -154,38 +250,6 @@ class App {
 
     public function error($message, $header=false) {
         $this->out("Red", $message, $header);
-    }
-
-    public function keyGet($key) {
-        return $this->store->get(md5($key));
-    }
-
-    public function keySet($key, $value) {
-        return $this->store->set(md5($key), $value);
-    }
-
-    public function browserGet($url) {
-        $this->info($url, "browserGet");
-
-        return $this->browserQueue->__invoke($url)->then(function($response) use ($url) {
-            $data = array();
-            $data['headers'] = (array)$response->getHeaders();
-            $data['body'] = (string)$response->getBody();
-            $data = (object) $data;
-
-            $this->info($url, "browserGet->Response");
-            return $data;
-        });
-    }
-
-    public function putContents($path, $data) {
-        $this->info($path, "putContents");
-        return $this->putContentsQueue->__invoke($path, $data);
-    }
-
-    public function getContents($path) {
-        $this->info($path, "getContents");
-        return $this->getContentsQueue->__invoke($path);
     }
 
     function filesize_formatted($size)

@@ -15,104 +15,171 @@ class Download {
     public $percent = 0;
     public $speed = 0;
     public $speedText = "";
-    private $speedLimit = 0;
+    public $speedLimit = 0;
     public $time;
     public $timeText;
     public $secData = 0;
     public $secDataHistory = [];
 
+    private $app;
+
     public function __construct($downloader, $id, $path, $url) {
 
+        $this->app = $downloader->app;
+        $this->downloader = $downloader;
+
         $app = $downloader->app;
-        $app->info("added", "Download");
+        $app->info("added ".$url, "Download");
 
         $this->id = $id;
         $this->path = $path;
         $this->dir = dirname($path);
         $this->url = $url;
 
+        $this->speedLimit();
 
-        if((int)$downloader->app->config['downloader']['paralel']) {
-            $this->speedLimit = ((int)$downloader->app->config['downloader']['bandwith']*1000)/(int)$downloader->app->config['downloader']['paralel'];
-        } else {
-            $this->speedLimit = ((int)$downloader->app->config['downloader']['bandwith']*1000);
-        }
+        $app->filesystem->exists($this->dir)->onResolve(function ($error, $exists) use ($app) {
+            if ($error) {
+                $app->error("download->createFolder", $error->getMessage());
+            } else {
 
-        $app->filesystem->file($this->dir)->exists()->then(function () use ($app) {
-            $app->info($this->dir, "found");
-            $this->download($app);
-        }, function () use ($app) {
-            $app->info($this->dir, "create");
-            $app->filesystem->dir($this->dir)->createRecursive('rwxrwx---')->then(function() use ($app) {
-                $this->download($app);
-            }, function ($e) use ($app) {
-                $app->error($e->getMessage(), "Download->folder");
-                $this->error = $e->getMessage();
-            });
+                if($exists) {
+                    $this->download();
+                } else {
+                    $app->filesystem->createDirectoryRecursively($this->dir)->onResolve(function ($error, $value) use ($app) {
+                        if ($error) {
+                            $app->error("download->createFolder", $error->getMessage());
+                        } else {
+                            $this->download();
+                        }
+                    });
+                }
+
+            }
+
+        });
+
+        
+        \Amp\Loop::repeat($msInterval = 1000, function ($watcherId) use ($app) {
+
+            $this->speedLimit();
+ 
+            $this->secDataHistory[] = $this->secData;
+            $this->secDataHistory = array_slice($this->secDataHistory, -10, 10);
+            $this->secData = 0;
+
+            $this->speed = array_sum($this->secDataHistory)/count($this->secDataHistory);
+            $this->speedText = $app->filesize_formatted($this->speed);
+
+            $this->time = ($this->size-$this->currentSize)/$this->speed;
+            $this->timeText = gmdate('H:i:s', $this->time);
+
+            if($this->done) {
+                \Amp\Loop::cancel($watcherId);
+            }
+            
         });
 
         return $this;
     }
 
-    private function download($app) {
+    private function speedLimit() {
+        if(count($this->downloader->downloads)) {
+            $this->speedLimit = (int) ((int)$this->downloader->app->config['downloader']['bandwith']*1000)/count($this->downloader->downloads);
+        } else {
+            $this->speedLimit = ((int)$this->downloader->app->config['downloader']['bandwith']*1000);
+        }
+    }
+ 
+    private function download() {
 
-        $file = \React\Promise\Stream\unwrapWritable($app->filesystem->file($this->path)->open('cw'));
-        $app->browser->requestStreaming('GET', $this->url, array())->then(function (\Psr\Http\Message\ResponseInterface $response) use ($file, $app) {
 
-            $body = $response->getBody();
-            assert($body instanceof \Psr\Http\Message\StreamInterface);
-            assert($body instanceof \React\Stream\ReadableStreamInterface);
+        $app = $this->app;
 
-            $this->size = $response->getHeaders()['Content-Length'][0];
+        $app->filesystem->touch($this->path)->onResolve(function ($error, $value) use ($app) {
+            if ($error) {
+                $app->error("download->createFile", $error->getMessage());
+            } else {
 
-            $timer = $app->loop->addPeriodicTimer(1, function ($timer) use ($app, $body) {
-                // speed reduction resume
-                $body->resume();
+                $file = yield \Amp\File\openFile($this->path, "w");
 
-                $this->secDataHistory[] = $this->secData;
-                $this->secDataHistory = array_slice($this->secDataHistory, -10, 10);
-                $this->secData = 0;
+                $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
-                $this->speed = array_sum($this->secDataHistory)/count($this->secDataHistory);
-                $this->speedText = $app->filesize_formatted($this->speed);
+                $request = new \Amp\Http\Client\Request($this->url);
+                $request->setBodySizeLimit(99999 * 1024 * 1024);
+                $request->setTransferTimeout(12 * 60 * 60 * 1000);
 
-                $this->time = ($this->size-$this->currentSize)/$this->speed;
-                $this->timeText = gmdate('H:i:s', $this->time);
-            });
+                $client->request($request)->onResolve(function ($error, $response) use ($app, $file) {
 
-            $body->on('data', function ($chunk) use ($file, $body) {
-                $file->write($chunk);
-                $this->currentSize += strlen($chunk);
-                $this->secData += strlen($chunk);
-                $this->percent = number_format($this->currentSize / $this->size * 100, 0);
+                    if ($error) {
+                        $app->error("download->request", $error->getMessage());
+                    } else {
 
-                // speed reduction pause
-                if($this->secData >= $this->speedLimit) {
-                    $body->pause();
-                }
-            });
+                        $headers = $response->getHeaders();
+                        $this->size = $headers['content-length'][0];
 
-            $body->on('error', function (\Exception $e) use ($file, $app, $timer) {
-                $app->error($e->getMessage(), "Download->request");
-                $this->error = $e->getMessage();
-                $file->end();
-                $app->loop->cancelTimer($timer);
-            });
-        
-            $body->on('close', function () use ($file, $app, $timer) {
-                $this->done = true;
-                $file->end();
-                $app->loop->cancelTimer($timer);
-            });
+                        $body = $response->getBody();
 
-        }, function ($e) use ($app, $file) {
-            $app->error($e->getMessage(), "Download->request");
-            $this->error = $e->getMessage();
-            $file->end();
+                        while (null !== $chunk = yield $body->read()) {
+                            yield $file->write($chunk);
+
+                            $this->currentSize += strlen($chunk);
+                            $this->secData += strlen($chunk);
+                            $this->percent = number_format($this->currentSize / $this->size * 100, 0);
+
+                            // speed reduction pause
+                            if($this->secData >= $this->speedLimit) {
+                                yield \Amp\delay(1000);
+                            }
+
+
+                        }
+
+                        yield $file->close();
+                        $this->done = true;
+
+                    }
+
+
+                });
+
+            }
         });
 
     }
 
-    
+    public function __debugInfo() {
+
+		$return = array();
+		$reflect = new \ReflectionClass($this);
+		$properties = $reflect->getProperties();
+
+		foreach($properties as $property) {
+			$propertyName = $property->name;
+
+			$propertyModifiers = $property->getModifiers();
+			//$propertyModifiersNames = \Reflection::getModifierNames($propertyModifiers);
+
+			switch ($propertyModifiers) {
+				case 4:
+					continue(2);
+					break;
+			}
+
+			if(!is_object($this->$propertyName)) {
+
+				if(is_array($this->$propertyName)) {
+					$return[$propertyName] = "Array(".count($this->$propertyName).")";
+				} else {
+					$return[$propertyName] = $this->$propertyName;
+				}
+
+			} else {
+				$return[$propertyName] = get_class($this->$propertyName);
+			}
+		}
+
+		return $return;
+	}
 
 }

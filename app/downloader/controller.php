@@ -2,10 +2,11 @@
 
 namespace GT\BLK\Downloader;
 
+use Amp\Loop;
+
 class Controller {
 
     public $app;
-    public $loop;
 
     public $downloads = [];
     public $downloadQueue = [];
@@ -14,23 +15,14 @@ class Controller {
 
     public function __construct($app) {
         $this->app = $app;
-        $this->loop = $app->loop;
 
         $this->app->log("loaded", $this->getNameOfClass());
 
-        $this->loop->addPeriodicTimer(1, function () {
+        Loop::repeat($msInterval = 1000, function () {
             $this->stats();
             $this->cycle();
         });
 
-        $app->loop->addTimer(99999999999, function () {
-            $this->add("test1", __DATA__."/downloads/".uniqid("test")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-            $this->add("test2", __DATA__."/downloads/".uniqid("test")."BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-            $this->add("test3", __DATA__."/downloads/".uniqid("test")."/BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-            $this->add("test4", __DATA__."/downloads/".uniqid("test")."/BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-            $this->add("test5", __DATA__."/downloads/".uniqid("test")."/BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-            $this->add("test6", __DATA__."/downloads/".uniqid("test")."/BigBuckBunny.mp4", "https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_1920_18MG.mp4");
-        });
     }
 
     public function getNameOfClass()
@@ -49,8 +41,8 @@ class Controller {
     }
 
     public function stats() {
-        print_r($this->downloads);
-        echo PHP_EOL;
+        //print_r($this->downloads);
+        //echo PHP_EOL;
     }
 
     public function add($id, $path, $url) {
