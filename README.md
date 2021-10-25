@@ -16,7 +16,6 @@ No more limitations from the file hosters, enjoy your downloads at full speed!
 
 [Register for AllDebrid with my invite link and support me](https://alldebrid.com/?uid=2rp0k&lang=en)
 
-
-
 ### Similar Projects
 - [premiumizer for premiumize](https://github.com/piejanssens/premiumizer)
+
