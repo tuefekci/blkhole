@@ -193,7 +193,7 @@ class List extends React.Component {
     let _this = this;
     var stateData = this.state;
 
-    axios.get("http://127.0.0.1:1337/status").then(function (response) {
+    axios.get(window.location.origin+"/status").then(function (response) {
         let data = response.data;
         _this.setState({data: data});
     })
@@ -272,7 +272,7 @@ class App extends React.Component {
   addMagnet(value) {
     console.log(value);
 
-    axios.post("http://127.0.0.1:1337/add/magnet", {magnet: value}).then(function (response) {
+    axios.post(window.location.origin+"/add/magnet", {magnet: value}).then(function (response) {
         let data = response.data;
         console.log( data );
         alert("Magnet added!");

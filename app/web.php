@@ -56,15 +56,7 @@ class Web {
         $middleware = new class implements Middleware {
             public function handleRequest(Request $request, \Amp\Http\Server\RequestHandler $next): Promise {
                 return \Amp\call(function () use ($request, $next) {
-
-                    $method = $request->getMethod();
-
-                    if($method == "OPTIONS") {
-                        $response = new Response(Status::OK, [], '');
-                    } else {
-                        $response = yield $next->handleRequest($request);
-                    }
-
+                    $response = yield $next->handleRequest($request);
                     $response->setHeader("Access-Control-Allow-Origin", "*");
                     $response->setHeader("Access-Control-Request-Headers", "*");
                     $response->setHeader("Access-Control-Max-Age", 86400);

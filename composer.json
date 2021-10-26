@@ -11,9 +11,7 @@
         "wa72/simplelogger": "^1.1",
         "amphp/parallel-functions": "^1.0",
         "amphp/cache": "^1.5",
-        "amphp/serialization": "^1.0",
-        "cspray/labrador-http-cors": "^0.3.1",
-        "amphp/http-server-form-parser": "^1.1"
+        "amphp/serialization": "^1.0"
     },
     "repositories": [
         {
