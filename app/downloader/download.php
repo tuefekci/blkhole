@@ -122,54 +122,69 @@ class Download {
 
                 $file = yield \Amp\File\openFile($this->path, "w");
 
-                $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
-                $request = new \Amp\Http\Client\Request($this->url);
-                $request->setBodySizeLimit(99999 * 1024 * 1024);
-                $request->setTransferTimeout(12 * 60 * 60 * 1000);
+                try {
 
-                $client->request($request)->onResolve(function ($error, $response) use ($app, $file) {
+                    $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
-                    if ($error) {
-                        $app->error("download->request", $error->getMessage());
-
-                        $this->downloader->remove($this->id);
-                        $this->downloader->add($this->id, $this->path, $this->url, $this->size);
-                    } else {
-
-                        $headers = $response->getHeaders();
-
-                        if(!empty($headers['content-length'][0])) {
-                            $this->size = $headers['content-length'][0];
-                        }
-
-                        $body = $response->getBody();
-
-                        while (null !== $chunk = yield $body->read()) {
-                            yield $file->write($chunk);
-
-                            $this->currentSize += strlen($chunk);
-                            $this->secData += strlen($chunk);
-
-                            $this->percent = number_format($this->currentSize / $this->size * 100, 0);
-
-                            // speed reduction pause
-                            if($this->secData >= $this->speedLimit) {
-                                yield \Amp\delay(1000);
+                    $request = new \Amp\Http\Client\Request($this->url);
+                    $request->setBodySizeLimit(99999 * 1024 * 1024);
+                    $request->setTransferTimeout(12 * 60 * 60 * 1000);
+    
+                    $client->request($request)->onResolve(function ($error, $response) use ($app, $file) {
+    
+                        if ($error) {
+                            $app->error("download->request", $error->getMessage());
+    
+                            $this->downloader->remove($this->id);
+                            $this->downloader->add($this->id, $this->path, $this->url, $this->size);
+                        } else {
+    
+                            $headers = $response->getHeaders();
+    
+                            if(!empty($headers['content-length'][0])) {
+                                $this->size = $headers['content-length'][0];
                             }
-
-
+    
+                            $body = $response->getBody();
+    
+                            while (null !== $chunk = yield $body->read()) {
+                                yield $file->write($chunk);
+    
+                                $this->currentSize += strlen($chunk);
+                                $this->secData += strlen($chunk);
+    
+                                $this->percent = number_format($this->currentSize / $this->size * 100, 0);
+    
+                                // speed reduction pause
+                                if($this->secData >= $this->speedLimit) {
+                                    yield \Amp\delay(1000);
+                                }
+    
+    
+                            }
+    
+                            yield $file->close();
+                            $this->done = true;
+    
+                            $app->info("completed ".$this->url, "Download");
+    
                         }
+    
+    
+                    });
 
-                        yield $file->close();
-                        $this->done = true;
+                } catch (\Throwable $th) {
+                    var_dump($th);
 
-                        $app->info("completed ".$this->url, "Download");
+                    $app->error("download->request", $th->getMessage());
+    
+                    $this->downloader->remove($this->id);
+                    $this->downloader->add($this->id, $this->path, $this->url, $this->size);
 
-                    }
+                    //throw $th;
+                }
 
-
-                });
 
             }
         });

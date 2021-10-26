@@ -7,6 +7,7 @@ Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent f
 #### PHP > 7.2
 - Edit config_example.ini and add your alldebrid api key.
 - Edit main.php and change defines to your preferences.
+- run composer update
 - run php main.php
 
 #### Docker
