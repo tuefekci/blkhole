@@ -8,11 +8,137 @@ import './App.css';
 
 import * as Helpers from './Helpers';
 
-import { Container, Row, Col, Nav, Navbar, NavDropdown, Card, Button, ProgressBar, Form } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Navbar, NavDropdown, Card, Button, ProgressBar, Form, Alert } from 'react-bootstrap';
 
-import { FaExclamationTriangle, FaCloudDownloadAlt, FaDownload } from 'react-icons/fa';
+import { FaExclamationTriangle, FaCloudDownloadAlt, FaDownload, FaClock, FaPauseCircle, FaTachometerAlt, FaDatabase, FaCheckCircle } from 'react-icons/fa';
 
 const axios = require('axios').default;
+
+
+
+
+
+
+class Item extends React.Component {
+  constructor(props) {
+      super(props);
+  }
+
+  render() {
+
+    let data = this.props.data;
+    return (
+        <Row className="pt-3" key={"item"+data.filename}>
+          <Col>
+            <Card className="text bg-warning">
+              <Card.Header>{data.filename}</Card.Header>
+              <Card.Body>
+
+                {(() => {
+
+                  if(Helpers.empty(data.provider)) {
+
+                    return (
+                      <Card.Text>
+                        <FaExclamationTriangle /> Waiting for transfer to Provider.
+                      </Card.Text>
+                    );
+
+                  } else {
+
+                    if(!Helpers.empty(data.provider) && !data.provider.ready) {
+
+                      return (
+                        <div>
+                          <Card.Text>
+                            <FaCloudDownloadAlt /> Waiting for Provider Download to finish.
+                          </Card.Text>
+                        </div>
+                      );
+
+                    } else if(!Helpers.empty(data.provider) && data.provider.ready) {
+
+                        if(Helpers.empty(data.downloads)) {
+
+                          return (
+                            <div>
+                              <Card.Text>
+                                <FaPauseCircle /> Waiting for Downloader to download.
+                              </Card.Text>
+                            </div>
+                          );
+
+                        } else if(!Helpers.empty(data.downloads)) {
+
+                          let downloads = [];
+   
+                          Object.keys(data.downloads).forEach(function(key2) {
+
+                            let download = data.downloads[key2];
+
+                            let status = <FaDownload />;
+
+                            if(download.done) {
+                              status = <FaCheckCircle />;
+                            }
+
+                            if(download) {
+                              downloads.push(
+                                <Row>
+                                  <Col xs="6">{status} {Helpers.basename(download.path)}</Col>
+                                  <Col xs="6">
+                                    <Row>
+                                      <Col xs="3" className="pt-2"><ProgressBar className="bg-dark" variant="danger" now={download.percent} label={`${download.percent}%`} /></Col>
+                                      <Col xs="3"><FaDatabase /> {download.sizeText}</Col>
+                                      <Col xs="3"><FaTachometerAlt /> {download.speedText}</Col>
+                                      <Col xs="3"><FaClock /> {download.timeText}</Col>
+                                    </Row>
+                                  </Col>
+                                </Row>
+
+                              );
+                            } else {
+                              downloads.push(
+                                <Row>
+                                  <Col><FaPauseCircle /> Waiting for Download Slot.</Col>
+                                </Row>
+                              );
+                            }
+
+                          });
+                    
+                          return downloads;
+
+                        } else {
+                          return null;
+                        }
+
+
+                    }
+
+
+
+                  }
+
+                  return null;
+
+                })(this)}
+
+
+
+
+
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      );
+
+  }
+}
+
+
+
 
 class List extends React.Component {
   constructor(props) {
@@ -21,11 +147,12 @@ class List extends React.Component {
 
   loadList() {
 
-    var _this = this;
+    let _this = this;
     var stateData = this.state;
 
     axios.get("http://localhost:1337/status").then(function (response) {
-        var data = response.data;
+        let data = response.data;
+        console.log( data );
         _this.setState({data: data});
     })
     .catch(function (error) {
@@ -36,12 +163,12 @@ class List extends React.Component {
 
 
   componentDidMount() {
-    var _this = this;
+    let _this = this;
     this.loadList();
 
     setInterval(function(){ 
       _this.loadList(); 
-    }, 5000);
+    }, 1000);
   }
 
   render() {
@@ -53,106 +180,20 @@ class List extends React.Component {
 
               {(() => {
 
-                var _this = this;
-                var html = [];
+                let _this = this;
+                let html = [];
 
                 if(!Helpers.empty(this.state.data)) {
                     Object.keys(this.state.data).forEach(function(key) {
-
-                        var data = _this.state.data[key];
-                        html.push(
-                            <Row className="pt-3" key={'listItem'+key}>
-                              <Col>
-                                <Card className="text bg-warning">
-                                  <Card.Header>{data.filename}</Card.Header>
-                                  <Card.Body>
-
-                                    {(() => {
-
-                                      if(Helpers.empty(data.provider)) {
-
-                                        return (
-                                          <Card.Text>
-                                            <FaExclamationTriangle /> Waiting for transfer to Provider.
-                                          </Card.Text>
-                                        );
-
-                                      } else {
-
-                                        if(!Helpers.empty(data.provider) && !data.provider.ready) {
-
-                                          return (
-                                            <div>
-                                              <Card.Text>
-                                                <FaCloudDownloadAlt /> Waiting for Provider Download to finish.
-                                              </Card.Text>
-                                            </div>
-                                          );
-
-                                        } else if(!Helpers.empty(data.provider) && data.provider.ready) {
-
-                                            if(Helpers.empty(data.downloads) && data.provider.ready) {
-
-                                              return (
-                                                <div>
-                                                  <Card.Text>
-                                                    <FaDownload /> Waiting for Downloader to download.
-                                                  </Card.Text>
-                                                </div>
-                                              );
-
-                                            } else if(!Helpers.empty(data.downloads) && data.provider.ready) {
-
-                                              var downloads = [];
-                                              Object.keys(data.downloads).forEach(function(key) {
-
-                                                var download = data.downloads[key];
-
-                                                if(download) {
-                                                  downloads.push(
-                                                    <ProgressBar className="bg-dark" variant="danger" now={download.percent} label={`${download.percent}%`} />
-                                                  );
-                                                } else {
-                                                  downloads.push(
-                                                    <Card.Text>
-                                                      <FaDownload /> Waiting for Download Slot.
-                                                    </Card.Text>
-                                                  );
-                                                }
-
-                                              });
-
-                                              return html;
-
-                                            }
-
-
-                                        }
-
-
-
-                                      }
-
-                                      return null;
-
-                                    })(this)}
-
-
-
-
-
-                                  </Card.Body>
-                                </Card>
-                              </Col>
-                            </Row>
-                          );
-
+                      html.push(
+                          <Item key={"data"+key} data={_this.state.data[key]} />
+                      );
                     });
                 } else {
                     html.push(
-                        <div>
-                            <stong>Waiting for Blackhole.</stong>
-                        </div>
+                      <Card className="text bg-warning">
+                        <Card.Header>Waiting for Blackhole....</Card.Header>
+                      </Card>
                     );
                 }
 

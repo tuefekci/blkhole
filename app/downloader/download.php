@@ -11,6 +11,7 @@ class Download {
     public $dir = false;
     public $url = false;
     public $size = 0;
+    public $sizeText;
     public $currentSize = 0;
     public $percent = 0;
     public $speed = 0;
@@ -84,6 +85,8 @@ class Download {
 
             $this->speed = array_sum($this->secDataHistory)/count($this->secDataHistory);
             $this->speedText = $app->filesize_formatted($this->speed);
+
+            $this->sizeText = $app->filesize_formatted($this->size);
 
             if(!empty($this->size) && !empty($this->currentSize) && !empty($this->speed)) {
                 $this->time = ($this->size-$this->currentSize)/$this->speed;

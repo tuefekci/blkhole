@@ -76,6 +76,7 @@ class Controller {
             'dir' => $download->dir,
             'url' => $download->url,
             'size' => $download->size,
+            'sizeText' => $download->sizeText,
             'currentSize' => $download->currentSize,
             'percent' => $download->percent,
             'speed' => $download->speed,

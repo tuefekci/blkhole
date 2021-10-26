@@ -20,7 +20,7 @@ export var in_array = require('locutus/php/array/in_array');
 export var array_slice = require('locutus/php/array/array_slice');
 export var array_search = require('locutus/php/array/array_search');
 export var count = require('locutus/php/array/count');
-export var  array_filter = require('locutus/php/array/array_filter');
+export var array_filter = require('locutus/php/array/array_filter');
 
 // strings
 export var explode = require('locutus/php/strings/explode');

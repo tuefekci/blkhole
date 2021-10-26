@@ -81,9 +81,7 @@ class Web {
                     if(!empty($magnet['downloads'])) {
                         foreach($magnet['downloads'] as $key => $download) {
     
-    
-                            $info = false;
-                            //$info = $this->app->downloader->info($download);
+                            $info = $this->app->downloader->info($download);
                             if($info) {
                                 $data[$path]['downloads'][$key] = $info;
                             } else {
