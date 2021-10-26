@@ -24,6 +24,13 @@ class Item extends React.Component {
       super(props);
   }
 
+  bytesToSize(bytes) {
+      var sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      if (bytes == 0) return '0 Byte';
+      var i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)));
+      return Math.round(bytes / Math.pow(1024, i), 2) + ' ' + sizes[i];
+  }
+
   render() {
 
     let data = this.props.data;
@@ -46,17 +53,53 @@ class Item extends React.Component {
 
                   } else {
 
-                    if(!Helpers.empty(data.provider) && !data.provider.ready) {
+                    if(!Helpers.empty(data.provider) && Helpers.empty(data.downloads)) {
 
-                      return (
-                        <div>
-                          <Card.Text>
-                            <FaCloudDownloadAlt /> Waiting for Provider Download to finish.
-                          </Card.Text>
-                        </div>
-                      );
+                      if(!Helpers.empty(data.provider) && !Helpers.empty(data.providerStatus)) {
 
-                    } else if(!Helpers.empty(data.provider) && data.provider.ready) {
+                        if(data.providerStatus.status == "Downloading") {
+
+                          let time = (data.providerStatus.size-data.providerStatus.downloaded)/data.providerStatus.downloadSpeed;
+                          let percent = Math.round(data.providerStatus.downloaded / data.providerStatus.size * 100);
+
+                          return (
+                            <Row>
+                              <Col xs="6"><FaCloudDownloadAlt /> {data.providerStatus.filename}</Col>
+                              <Col xs="6">
+                                <Row>
+                                  <Col xs="3" className="pt-2"><ProgressBar className="bg-dark" variant="primary" now={percent} label={`${percent}%`} /></Col>
+                                  <Col xs="3"><FaDatabase /> {this.bytesToSize(data.providerStatus.size)}</Col>
+                                  <Col xs="3"><FaTachometerAlt /> {this.bytesToSize(data.providerStatus.downloadSpeed)}</Col>
+                                  <Col xs="3"><FaClock /> {Helpers.gmdate('H:i:s', parseInt(Math.round(time)))}</Col>
+                                </Row>
+                              </Col>
+                            </Row>
+                          );
+
+
+
+                        } else {
+                          return (
+                            <div>
+                              <Card.Text>
+                                <FaCloudDownloadAlt /> Waiting for Provider ({data.providerStatus.status}).
+                              </Card.Text>
+                            </div>
+                          );
+                        }
+
+                      } else {
+                        return (
+                          <div>
+                            <Card.Text>
+                              <FaCloudDownloadAlt /> Waiting for Provider.
+                            </Card.Text>
+                          </div>
+                        );
+                      }
+
+
+                    } else if(!Helpers.empty(data.provider)) {
 
                         if(Helpers.empty(data.downloads)) {
 

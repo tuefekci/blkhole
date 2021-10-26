@@ -65,7 +65,7 @@ class Download {
         });
 
         
-        \Amp\Loop::repeat($msInterval = 10000, function ($watcherId) use ($app) {
+        \Amp\Loop::repeat($msInterval = 60000, function ($watcherId) use ($app) {
 
             $this->app->info($this->percent."% / speed: ".$this->speedText." / tta: ".$this->timeText , "download->".$this->path);
 

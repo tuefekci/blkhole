@@ -4,7 +4,7 @@ Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent f
 
 ### Getting Started
 
-#### PHP
+#### PHP > 7.2
 - Edit config_example.ini and add your alldebrid api key.
 - Edit main.php and change defines to your preferences.
 - run php main.php
@@ -17,6 +17,7 @@ Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent f
 
 
 ### Todos (Longterm Goals):
+- Self Updates
 - Dynamic Speed Reduction for Downloads
 - Resume Downloads instead of Restarting
 - Unpack Archives after Download

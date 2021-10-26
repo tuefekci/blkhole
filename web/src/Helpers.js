@@ -37,6 +37,7 @@ export var abs = require('locutus/php/math/abs');
 // time
 export var time = require('locutus/php/datetime/time');
 export var date = require('locutus/php/datetime/date');
+export var gmdate = require('locutus/php/datetime/gmdate');
 export var strtotime = require('locutus/php/datetime/strtotime');
 
 // filesystem

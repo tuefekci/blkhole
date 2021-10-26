@@ -104,7 +104,6 @@ class Web {
 
                         preg_match('#magnet:\?xt=urn:btih:(?<hash>.*?)&dn=(?<filename>.*?)&tr=(?<trackers>.*?)$#', $magnetRaw, $magnet);
 
-                        var_dump($magnet['filename']);
                         if(!empty($magnet['filename']) && is_string($magnet['filename'])) {
 
 
@@ -146,6 +145,17 @@ class Web {
                 $data = $this->app->magnets;
 
                 foreach($data as $path => $magnet) {
+
+                    if(!empty($magnet['provider'])) {
+
+                        $status = $this->app->provider->status($magnet['provider']->id);
+
+                        if(!empty($status)) {
+                            $data[$path]['providerStatus'] = $status;
+                        }
+                        
+                    }
+
                     if(!empty($magnet['downloads'])) {
                         foreach($magnet['downloads'] as $key => $download) {
     
