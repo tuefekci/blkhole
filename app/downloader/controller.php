@@ -59,6 +59,36 @@ class Controller {
         //echo PHP_EOL;
     }
 
+
+
+    public function info($id) {
+
+        $download = $this->get($id);
+
+        if(!$download) {
+            return false;
+        }
+
+        return array(
+            'done' => $download->done,
+            'id' => $download->id,
+            'path' => $download->path,
+            'dir' => $download->dir,
+            'url' => $download->url,
+            'size' => $download->size,
+            'currentSize' => $download->currentSize,
+            'percent' => $download->percent,
+            'speed' => $download->speed,
+            'speedText' => $download->speedText,
+            'speedLimit' => $download->speedLimit,
+            'time' => $download->time,
+            'timeText' => $download->timeText,
+            'secData' => $download->secData,
+            'secDataHistory' => $download->secDataHistory
+        );
+
+    }
+
     public function get($id) {
 
         // TODO: This whole situation how downloads are assigned etc. should be reworked.
@@ -69,13 +99,6 @@ class Controller {
 
         if(!empty($this->downloadsDone[$id])) {
             return $this->downloadsDone[$id];
-        }
-
-        foreach($this->downloadQueue as $download) {
-            if($download['id'] == $id) {
-                $download['done'] = false;
-                return (object) $download;
-            }
         }
 
         return false;

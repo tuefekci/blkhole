@@ -18,8 +18,6 @@ class App {
     public $cli;
     public $config;
 
-
-
     public PrefixCache $cache;
     public Filesystem $filesystem;
 
@@ -129,7 +127,12 @@ class App {
 
                 foreach($magnet['downloads'] as $dlId) {
                     $download = $this->downloader->get($dlId);
-                    $check[] = $download->done;
+
+                    if($download) {
+                        $check[] = $download->done;
+                    } else {
+                        $check[] = false;
+                    }
                 }
 
 

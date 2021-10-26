@@ -10,7 +10,8 @@
         "amphp/http-server-router": "^1.0",
         "wa72/simplelogger": "^1.1",
         "amphp/parallel-functions": "^1.0",
-        "amphp/cache": "^1.5"
+        "amphp/cache": "^1.5",
+        "amphp/serialization": "^1.0"
     },
     "repositories": [
         {
