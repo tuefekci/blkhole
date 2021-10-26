@@ -8,9 +8,10 @@ import './App.css';
 
 import * as Helpers from './Helpers';
 
-import { Container, Row, Col, Nav, Navbar, NavDropdown, Card, Button, ProgressBar, Form, Alert } from 'react-bootstrap';
+import { Container, Row, Col, Nav, Navbar, NavDropdown, Card, Button, ProgressBar, Form, Alert, OverlayTrigger, Tooltip } from 'react-bootstrap';
 
 import { FaExclamationTriangle, FaCloudDownloadAlt, FaDownload, FaClock, FaPauseCircle, FaTachometerAlt, FaDatabase, FaCheckCircle } from 'react-icons/fa';
+import empty from 'locutus/php/var/empty';
 
 const axios = require('axios').default;
 
@@ -59,12 +60,26 @@ class Item extends React.Component {
 
                         if(data.providerStatus.status == "Downloading") {
 
-                          let time = (data.providerStatus.size-data.providerStatus.downloaded)/data.providerStatus.downloadSpeed;
-                          let percent = Math.round(data.providerStatus.downloaded / data.providerStatus.size * 100);
+                          let time = 0;
+                          if(!Helpers.empty(data.providerStatus.size) && !Helpers.empty(data.providerStatus.downloaded) && !Helpers.empty(data.providerStatus.downloadSpeed)) {
+                            time = (data.providerStatus.size-data.providerStatus.downloaded)/data.providerStatus.downloadSpeed;
+                          }
+
+                          let percent = 0;
+
+                          if(!Helpers.empty(data.providerStatus.size) && !Helpers.empty(data.providerStatus.downloaded)) {
+                            percent = Math.round(data.providerStatus.downloaded / data.providerStatus.size * 100);
+                          }
+
+
 
                           return (
                             <Row>
-                              <Col xs="6"><FaCloudDownloadAlt /> {data.providerStatus.filename}</Col>
+                              <Col xs="6">
+                                <OverlayTrigger placement={"top"}overlay={<Tooltip>Provider Download</Tooltip>}>
+                                  <FaCloudDownloadAlt /> 
+                                </OverlayTrigger> {data.providerStatus.filename}
+                              </Col>
                               <Col xs="6">
                                 <Row>
                                   <Col xs="3" className="pt-2"><ProgressBar className="bg-dark" variant="primary" now={percent} label={`${percent}%`} /></Col>
