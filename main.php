@@ -21,8 +21,6 @@ define("__DATA__", realpath(__ROOT__."/data"));
 define("__BLACKHOLE__", realpath(__DATA__."/blackhole"));
 define("__DOWNLOADS__", realpath(__DATA__."/downloads"));
 
-
-
 define("__CONF__", realpath(__ROOT__."/config"));
 define("__PUBLIC__", realpath(__ROOT__."/web/build"));
 // =================================================================

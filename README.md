@@ -2,8 +2,11 @@
 
 Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent files into a folder and blkhole does the communication with the provider and downloads everything in the appropiate folders.
 
-### How To
+### Getting Started
+
+#### PHP
 - Edit config_example.ini and add your alldebrid api key.
+- Edit main.php and change defines to your preferences.
 - run php main.php
 
 ### Webinterface

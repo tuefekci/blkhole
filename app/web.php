@@ -150,8 +150,8 @@ class Web {
         \Amp\Loop::run(static function () use ($_this) {
 
             $servers = [
-                Socket\Server::listen("0.0.0.0:1337"),
-                Socket\Server::listen("[::]:1337"),
+                Socket\Server::listen("0.0.0.0:".(int)$_this->app->config['web']['port']),
+                Socket\Server::listen("[::]:".(int)$_this->app->config['web']['port']),
             ];
 
             $server = new HttpServer($servers, $_this->router, new \Wa72\SimpleLogger\EchoLogger());
