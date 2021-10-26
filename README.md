@@ -9,8 +9,18 @@ Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent f
 - Edit main.php and change defines to your preferences.
 - run php main.php
 
+#### Docker
+
 ### Webinterface
 ![alt text](https://github.com/tuefekci/blkhole/raw/main/web/src/screenshot.png "Webinterface")
+
+
+
+### Todos (Longterm Goals):
+- Dynamic Speed Reduction for Downloads
+- Resume Downloads instead of Restarting
+- Unpack Archives after Download
+- CRC or Size check for validation if download was really successfull.
 
 ### AllDebrid
 [<img src="https://cdn.alldebrid.com/lib/images/features.en.gif">](https://alldebrid.com/?uid=2rp0k&lang=en)

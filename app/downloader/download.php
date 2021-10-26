@@ -132,6 +132,9 @@ class Download {
 
                     if ($error) {
                         $app->error("download->request", $error->getMessage());
+
+                        $this->downloader->remove($this->id);
+                        $this->downloader->add($this->id, $this->path, $this->url, $this->size);
                     } else {
 
                         $headers = $response->getHeaders();

@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "97033348823c41d731ed792866637520",
+    "content-hash": "9a224d7aa3de7be8917fb9d6e2fc55f8",
     "packages": [
         {
             "name": "amphp/amp",
@@ -740,6 +740,79 @@
             "time": "2021-08-23T14:19:34+00:00"
         },
         {
+            "name": "amphp/http-server-form-parser",
+            "version": "v1.1.4",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/amphp/http-server-form-parser.git",
+                "reference": "657d945ebc4d5a3b1ea7b1d25c52fb2fdb118f1d"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/amphp/http-server-form-parser/zipball/657d945ebc4d5a3b1ea7b1d25c52fb2fdb118f1d",
+                "reference": "657d945ebc4d5a3b1ea7b1d25c52fb2fdb118f1d",
+                "shasum": ""
+            },
+            "require": {
+                "amphp/amp": "^2",
+                "amphp/byte-stream": "^1.3",
+                "amphp/http": "^1",
+                "amphp/http-server": "^2 || ^1 || ^0.8",
+                "php": ">=7.1"
+            },
+            "require-dev": {
+                "amphp/log": "^1.0",
+                "amphp/php-cs-fixer-config": "dev-master",
+                "amphp/phpunit-util": "^1.1.2",
+                "phpunit/phpunit": "^9 || ^8 || ^7 || ^6"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Amp\\Http\\Server\\FormParser\\": "src"
+                },
+                "files": [
+                    "src/functions.php"
+                ]
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Daniel Lowrey",
+                    "email": "rdlowrey@php.net"
+                },
+                {
+                    "name": "Bob Weinand"
+                },
+                {
+                    "name": "Niklas Keller",
+                    "email": "me@kelunik.com"
+                },
+                {
+                    "name": "Aaron Piotrowski",
+                    "email": "aaron@trowski.com"
+                }
+            ],
+            "description": "A form parser for Amp's HTTP parser.",
+            "homepage": "https://github.com/amphp/http-server-form-parser",
+            "keywords": [
+                "amp",
+                "amphp",
+                "async",
+                "form",
+                "http",
+                "non-blocking"
+            ],
+            "support": {
+                "issues": "https://github.com/amphp/http-server-form-parser/issues",
+                "source": "https://github.com/amphp/http-server-form-parser/tree/master"
+            },
+            "time": "2020-03-24T20:17:15+00:00"
+        },
+        {
             "name": "amphp/http-server-router",
             "version": "v1.0.2",
             "source": {
@@ -808,16 +881,16 @@
         },
         {
             "name": "amphp/parallel",
-            "version": "v1.4.0",
+            "version": "v1.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/parallel.git",
-                "reference": "2c1039bf7ca137eae4d954b14c09a7535d7d4e1c"
+                "reference": "fbc128383c1ffb3823866f71b88d8c4722a25ce9"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/parallel/zipball/2c1039bf7ca137eae4d954b14c09a7535d7d4e1c",
-                "reference": "2c1039bf7ca137eae4d954b14c09a7535d7d4e1c",
+                "url": "https://api.github.com/repos/amphp/parallel/zipball/fbc128383c1ffb3823866f71b88d8c4722a25ce9",
+                "reference": "fbc128383c1ffb3823866f71b88d8c4722a25ce9",
                 "shasum": ""
             },
             "require": {
@@ -870,9 +943,15 @@
             ],
             "support": {
                 "issues": "https://github.com/amphp/parallel/issues",
-                "source": "https://github.com/amphp/parallel/tree/master"
+                "source": "https://github.com/amphp/parallel/tree/v1.4.1"
             },
-            "time": "2020-04-27T15:12:37+00:00"
+            "funding": [
+                {
+                    "url": "https://github.com/amphp",
+                    "type": "github"
+                }
+            ],
+            "time": "2021-10-25T19:16:02+00:00"
         },
         {
             "name": "amphp/parallel-functions",
@@ -1196,16 +1275,16 @@
         },
         {
             "name": "amphp/sync",
-            "version": "v1.4.0",
+            "version": "v1.4.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/amphp/sync.git",
-                "reference": "613047ac54c025aa800a9cde5b05c3add7327ed4"
+                "reference": "85ab06764f4f36d63b1356b466df6111cf4b89cf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/amphp/sync/zipball/613047ac54c025aa800a9cde5b05c3add7327ed4",
-                "reference": "613047ac54c025aa800a9cde5b05c3add7327ed4",
+                "url": "https://api.github.com/repos/amphp/sync/zipball/85ab06764f4f36d63b1356b466df6111cf4b89cf",
+                "reference": "85ab06764f4f36d63b1356b466df6111cf4b89cf",
                 "shasum": ""
             },
             "require": {
@@ -1252,9 +1331,15 @@
             ],
             "support": {
                 "issues": "https://github.com/amphp/sync/issues",
-                "source": "https://github.com/amphp/sync/tree/v1.4.0"
+                "source": "https://github.com/amphp/sync/tree/v1.4.2"
             },
-            "time": "2020-05-07T18:57:50+00:00"
+            "funding": [
+                {
+                    "url": "https://github.com/amphp",
+                    "type": "github"
+                }
+            ],
+            "time": "2021-10-25T18:29:10+00:00"
         },
         {
             "name": "amphp/windows-registry",
@@ -1351,6 +1436,45 @@
                 "source": "https://github.com/cash/LRUCache/tree/1.0.0"
             },
             "time": "2013-09-20T18:59:12+00:00"
+        },
+        {
+            "name": "cspray/labrador-http-cors",
+            "version": "0.3.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/labrador-kennel/http-cors.git",
+                "reference": "261ac2af0c647187024e6eb0ff1adf11d60338e4"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/labrador-kennel/http-cors/zipball/261ac2af0c647187024e6eb0ff1adf11d60338e4",
+                "reference": "261ac2af0c647187024e6eb0ff1adf11d60338e4",
+                "shasum": ""
+            },
+            "require": {
+                "amphp/http-server": "^1.0 || ^2.0",
+                "php": "^7.0 || ^8.0"
+            },
+            "require-dev": {
+                "amphp/phpunit-util": "^1.3",
+                "cspray/labrador-coding-standard": "0.2.0",
+                "phpunit/phpunit": "^9.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Cspray\\Labrador\\Http\\Cors\\": [
+                        "src/"
+                    ]
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "description": "An Amp http-server middleware library to facilitate CORS",
+            "support": {
+                "issues": "https://github.com/labrador-kennel/http-cors/issues",
+                "source": "https://github.com/labrador-kennel/http-cors/tree/0.3.1"
+            },
+            "time": "2021-06-17T10:53:26+00:00"
         },
         {
             "name": "daverandom/libdns",

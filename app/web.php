@@ -16,6 +16,7 @@ use Amp\Socket;
 use Amp\Loop;
 use Psr\Log\NullLogger;
 
+use Amp\Http\Server\FormParser;
 use Amp\Serialization\JsonSerializer;
 use Amp\File\File;
 use Amp\File\Filesystem;
@@ -26,6 +27,10 @@ use Amp\Promise;
 use function Amp\ParallelFunctions\parallel;
 use function Amp\ParallelFunctions\parallelMap;
 use function Amp\Promise\wait;
+
+use Cspray\Labrador\Http\Cors\ConfigurationBuilder;
+use Cspray\Labrador\Http\Cors\SimpleConfigurationLoader;
+use Cspray\Labrador\Http\Cors\CorsMiddleware;
 
 use Amp\Http\Server\Middleware;
 
@@ -51,17 +56,25 @@ class Web {
         $middleware = new class implements Middleware {
             public function handleRequest(Request $request, \Amp\Http\Server\RequestHandler $next): Promise {
                 return \Amp\call(function () use ($request, $next) {
-                    $response = yield $next->handleRequest($request);
+
+                    $method = $request->getMethod();
+
+                    if($method == "OPTIONS") {
+                        $response = new Response(Status::OK, [], '');
+                    } else {
+                        $response = yield $next->handleRequest($request);
+                    }
+
                     $response->setHeader("Access-Control-Allow-Origin", "*");
                     $response->setHeader("Access-Control-Request-Headers", "*");
-                    $response->setHeader("Access-Control-Max-Age", "*");
+                    $response->setHeader("Access-Control-Max-Age", 86400);
         
                     return $response;
                 });
             }
         };
 
-
+        
         $this->router->stack($middleware);
 
         $this->router->addRoute('GET', '/', new CallableRequestHandler(function () use ($_this) {
@@ -71,6 +84,61 @@ class Web {
         $this->router->addRoute('GET', '/hello', new CallableRequestHandler(function () {
             return new Response(Status::OK, ['content-type' => 'text/plain'], 'Hello, world!'.time());
         }));
+
+        $this->router->addRoute('POST', '/add/magnet', new CallableRequestHandler(function (\Amp\Http\Server\Request $request) use ($_this) {
+
+            try {
+
+                $data = yield $request->getBody()->buffer();
+                $data = \json_decode($data);
+
+                if(!empty($data) && !empty($data->magnet)) {
+    
+                    if (\strpos($data->magnet, 'magnet:') !== false) {
+
+                        $magnetRaw = $data->magnet;
+
+                        if(preg_match('~%[0-9A-F]{2}~i', $magnetRaw)) {
+                            $magnetRaw = urldecode($magnetRaw);
+                        }
+
+                        preg_match('#magnet:\?xt=urn:btih:(?<hash>.*?)&dn=(?<filename>.*?)&tr=(?<trackers>.*?)$#', $magnetRaw, $magnet);
+
+                        var_dump($magnet['filename']);
+                        if(!empty($magnet['filename']) && is_string($magnet['filename'])) {
+
+
+                            $app = $this->app;
+
+                            $app->filesystem->exists(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $exists) use ($app, $magnet, $magnetRaw) {
+                                if ($error) {
+                                    $app->error("webinterface->blackhole->checkFolder->doesNotExists??", $error->getMessage());
+                                } else {
+                                    if($exists) {
+                                        $app->filesystem->write(__BLACKHOLE__."/webinterface/".\tuefekci\helpers\Strings::normalizeString($magnet['filename']).".magnet", $magnetRaw);
+                                    }
+                                }
+                    
+                            });
+
+
+                        }
+
+                    }
+    
+                }
+
+                return new Response(Status::OK, ['content-type' => 'text/plain'], ''.time());
+
+            } catch (\Throwable $th) {
+                //throw $th;
+                var_dump($th->getMessage());
+            }
+
+
+
+        }));
+
 
         $this->router->addRoute('GET', '/status', new CallableRequestHandler(function () {
 
@@ -106,10 +174,11 @@ class Web {
         $this->router->setFallback(new CallableRequestHandler(function (\Amp\Http\Server\Request $request) use ($_this) {
 
             $requestPath = $request->getUri();
+            
             $path = realpath(__PUBLIC__.$request->getUri()->getPath());
 
             try {
-                $args = $request->getAttributes();
+                //$args = $request->getAttributes();
             } catch (\Throwable $e) {
                 # code...
             }

@@ -32,6 +32,8 @@ class App {
         $this->config = \Noodlehaus\Config::load(__CONF__.'/config.ini')->all();
 
 
+        $this->createFolders();
+
         // =================================================================
         // init cache
         $app->filesystem->exists(__CONF__.'/cache')->onResolve(function ($error, $exists) use ($app) {
@@ -54,6 +56,55 @@ class App {
             }
         });
         // =================================================================
+    }
+
+    public function createFolders() {
+
+
+        $app = $this;
+
+        // Webinterface Blackhole
+        $app->filesystem->exists(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $exists) use ($app) {
+            if ($error) {
+                $app->error("webinterface->checkFolder", $error->getMessage());
+            } else {
+
+                if($exists) {
+                    
+                } else {
+                    $app->filesystem->createDirectoryRecursively(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $value) use ($app) {
+                        if ($error) {
+                            $app->error("webinterface->createFolder", $error->getMessage());
+                        } else {
+                        }
+                    });
+                }
+
+            }
+
+        });
+
+        // Webinterface Downloads
+        $app->filesystem->exists(__DOWNLOADS__."/webinterface")->onResolve(function ($error, $exists) use ($app) {
+            if ($error) {
+                $app->error("webinterface->checkFolder", $error->getMessage());
+            } else {
+
+                if($exists) {
+                    
+                } else {
+                    $app->filesystem->createDirectoryRecursively(__DOWNLOADS__."/webinterface")->onResolve(function ($error, $value) use ($app) {
+                        if ($error) {
+                            $app->error("webinterface->createFolder", $error->getMessage());
+                        } else {
+                        }
+                    });
+                }
+
+            }
+
+        });
+
     }
 
     public function run() {
@@ -90,7 +141,7 @@ class App {
             $provider->getStatus();
         });
 
-        \Amp\Loop::repeat($msInterval = 15000, function () {
+        \Amp\Loop::repeat($msInterval = 5000, function () {
             $this->checkFiles();
         });
 
@@ -243,7 +294,7 @@ class App {
 
     // check blackhole for magnets and torrents
     private function checkFiles() {
-        $this->info(__BLACKHOLE__, "checkFiles->blackhole");
+        //$this->info(__BLACKHOLE__, "checkFiles->blackhole");
 
         $this->filesystem->listFiles(__BLACKHOLE__)->onResolve(function ($error, $files) {
             if ($error) {

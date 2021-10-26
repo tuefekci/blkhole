@@ -150,9 +150,8 @@ class List extends React.Component {
     let _this = this;
     var stateData = this.state;
 
-    axios.get("http://localhost:1337/status").then(function (response) {
+    axios.get("http://127.0.0.1:1337/status").then(function (response) {
         let data = response.data;
-        console.log( data );
         _this.setState({data: data});
     })
     .catch(function (error) {
@@ -211,61 +210,99 @@ class List extends React.Component {
   }
 }
 
-function App() {
-  return (
-    <Container fluid>
 
-      <Navbar collapseOnSelect expand="lg" bg="warning" variant="light">
-        <Container>
-        <Navbar.Brand href="#home"><img src={logo} className="img-responsive logo" alt="logo" /></Navbar.Brand>
-        <Navbar.Toggle aria-controls="responsive-navbar-nav" />
-        <Navbar.Collapse id="responsive-navbar-nav">
-          <Nav className="mr-auto">
+class App extends React.Component {
 
-          </Nav>
-          <Nav>
-            <Nav.Link href="#settings">Settings</Nav.Link>
-          </Nav>
-        </Navbar.Collapse>
-        </Container>
-      </Navbar>
+  constructor(props) {
+      super(props);
 
-      <Container className="main-content">
+      this.state = {magnet: '', data: ''};
+      this.handleMagnetChange = this.handleMagnetChange.bind(this);
+  }
 
-        <Row className="pb-3">
-          <Col>
-            <Card className="text bg-warning">
-              <Card.Header>Add Magnet</Card.Header>
-              <Card.Body className="pb-0">
-                <Form>
-                  <Form.Group className="" controlId="formMagnet">
-                    <Form.Control type="magnet" placeholder="magnet:xt=urn:btih:xxx" />
-                  </Form.Group>
-                </Form>
-              </Card.Body>
-            </Card>
-          </Col>
-          <Col>
-            <Card className="text bg-warning">
-                <Card.Header>Add Torrent</Card.Header>
+  
+  handleMagnetChange(event) {
+    this.setState({magnet: event.target.value});
+    this.addMagnet(event.target.value);
+  }
+
+  addMagnet(value) {
+    console.log(value);
+
+    axios.post("http://127.0.0.1:1337/add/magnet", {magnet: value}).then(function (response) {
+        let data = response.data;
+        console.log( data );
+        alert("Magnet added!");
+    })
+    .catch(function (error) {
+        console.error( error );
+    });
+
+
+    this.setState({magnet: ""});
+  }
+
+  addTorrent() {
+
+  }
+
+  render() {
+
+    return (
+      <Container fluid>
+
+        <Navbar collapseOnSelect expand="lg" bg="warning" variant="light">
+          <Container>
+          <Navbar.Brand href="#home"><img src={logo} className="img-responsive logo" alt="logo" /></Navbar.Brand>
+          <Navbar.Toggle aria-controls="responsive-navbar-nav" />
+          <Navbar.Collapse id="responsive-navbar-nav">
+            <Nav className="mr-auto">
+
+            </Nav>
+            <Nav>
+              <Nav.Link href="#settings">Settings</Nav.Link>
+            </Nav>
+          </Navbar.Collapse>
+          </Container>
+        </Navbar>
+
+        <Container className="main-content">
+
+          <Row className="pb-3">
+            <Col>
+              <Card className="text bg-warning">
+                <Card.Header>Add Magnet</Card.Header>
                 <Card.Body className="pb-0">
                   <Form>
-                    <Form.Group controlId="formTorrent">
-                      <Button variant="danger" className="btn-block">Enter Torrent</Button>
+                    <Form.Group className="" controlId="formMagnet">
+                      <Form.Control type="magnet" value={this.state.magnet} onChange={this.handleMagnetChange} placeholder="magnet:xt=urn:btih:xxx" />
                     </Form.Group>
                   </Form>
                 </Card.Body>
               </Card>
-          </Col>
-        </Row>
+            </Col>
+            <Col>
+              <Card className="text bg-warning">
+                  <Card.Header>Add Torrent</Card.Header>
+                  <Card.Body className="pb-0">
+                    <Form>
+                      <Form.Group controlId="formTorrent">
+                        <Button variant="danger" className="btn-block">Enter Torrent</Button>
+                      </Form.Group>
+                    </Form>
+                  </Card.Body>
+                </Card>
+            </Col>
+          </Row>
 
-        <List />
+          <List />
+
+        </Container>
+
 
       </Container>
-
-
-    </Container>
-  );
+    );
+  }
 }
 
 export default App;
