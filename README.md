@@ -6,6 +6,8 @@ Is a blackhole tool for AllDebrid which allows you to dump magnets and torrent f
 - Edit config_example.ini and add your alldebrid api key.
 - run php main.php
 
+### Webinterface
+![alt text](https://github.com/tuefekci/blkhole/raw/main/web/src/screenshot.png "Webinterface")
 
 ### AllDebrid
 [<img src="https://cdn.alldebrid.com/lib/images/features.en.gif">](https://alldebrid.com/?uid=2rp0k&lang=en)
