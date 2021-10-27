@@ -2,36 +2,17 @@
 
 namespace GT\BLK;
 
-use Amp\ByteStream\ResourceOutputStream;
 use Amp\Http\Server\HttpServer;
 use Amp\Http\Server\RequestHandler\CallableRequestHandler;
 use Amp\Http\Server\Response;
 use Amp\Http\Server\Request;
-use Amp\Http\Server\Router;
-use Amp\Http\Server\Server;
 use Amp\Http\Status;
-use Amp\Log\ConsoleFormatter;
-use Amp\Log\StreamHandler;
 use Amp\Socket;
-use Amp\Loop;
-use Psr\Log\NullLogger;
 
-use Amp\Http\Server\FormParser;
-use Amp\Serialization\JsonSerializer;
-use Amp\File\File;
 use Amp\File\Filesystem;
 use function Amp\File\filesystem;
-use function Amp\Http\formatDateHeader;
 
 use Amp\Promise;
-use function Amp\ParallelFunctions\parallel;
-use function Amp\ParallelFunctions\parallelMap;
-use function Amp\Promise\wait;
-
-use Cspray\Labrador\Http\Cors\ConfigurationBuilder;
-use Cspray\Labrador\Http\Cors\SimpleConfigurationLoader;
-use Cspray\Labrador\Http\Cors\CorsMiddleware;
-
 use Amp\Http\Server\Middleware;
 
 class Web {

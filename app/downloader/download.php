@@ -130,6 +130,7 @@ class Download {
                     $request = new \Amp\Http\Client\Request($this->url);
                     $request->setBodySizeLimit(99999 * 1024 * 1024);
                     $request->setTransferTimeout(12 * 60 * 60 * 1000);
+                    //$request->setTlsHandshakeTimeout(1);
     
                     $client->request($request)->onResolve(function ($error, $response) use ($app, $file) {
     
@@ -174,15 +175,11 @@ class Download {
     
                     });
 
-                } catch (\Throwable $th) {
-                    var_dump($th);
-
+                } catch (\Throwable|\Amp\Http\Client\TimeoutException $th) {
                     $app->error("download->request", $th->getMessage());
     
                     $this->downloader->remove($this->id);
                     $this->downloader->add($this->id, $this->path, $this->url, $this->size);
-
-                    //throw $th;
                 }
 
 
@@ -190,39 +187,5 @@ class Download {
         });
 
     }
-
-    public function __debugInfo() {
-
-		$return = array();
-		$reflect = new \ReflectionClass($this);
-		$properties = $reflect->getProperties();
-
-		foreach($properties as $property) {
-			$propertyName = $property->name;
-
-			$propertyModifiers = $property->getModifiers();
-			//$propertyModifiersNames = \Reflection::getModifierNames($propertyModifiers);
-
-			switch ($propertyModifiers) {
-				case 4:
-					continue(2);
-					break;
-			}
-
-			if(!is_object($this->$propertyName)) {
-
-				if(is_array($this->$propertyName)) {
-					$return[$propertyName] = "Array(".count($this->$propertyName).")";
-				} else {
-					$return[$propertyName] = $this->$propertyName;
-				}
-
-			} else {
-				$return[$propertyName] = get_class($this->$propertyName);
-			}
-		}
-
-		return $return;
-	}
 
 }
