@@ -49,7 +49,7 @@ spl_autoload_register(function ($class_name) {
         $class_name = str_replace("GT\BLK", "", $class_name);
         $class_name = str_replace('\\', DIRECTORY_SEPARATOR, $class_name);
         $class_name = strtolower($class_name);
-        include __APP__ . $class_name . '.php';
+        include __APP__ . DIRECTORY_SEPARATOR . $class_name . '.php';
     }
 });
 // =================================================================

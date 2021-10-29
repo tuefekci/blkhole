@@ -18,7 +18,6 @@ class App {
     public $cli;
     public $config;
 
-    public PrefixCache $cache;
     public Filesystem $filesystem;
 
     public array $torrents = array();
@@ -33,29 +32,6 @@ class App {
 
 
         $this->createFolders();
-
-        // =================================================================
-        // init cache
-        $app->filesystem->exists(__CONF__.'/cache')->onResolve(function ($error, $exists) use ($app) {
-            if ($error) {
-                $app->error("cache->exists", $error->getMessage());
-            } else {
-
-                if($exists) {
-                    $this->cache = new PrefixCache(new FileCache(__CONF__.'/cache', new \Amp\Sync\LocalKeyedMutex()), 'amphp-cache-');
-                } else {
-                    $app->filesystem->createDirectoryRecursively(__CONF__.'/cache')->onResolve(function ($error, $value) use ($app) {
-                        if ($error) {
-                            $app->error("cache->createFolder", $error->getMessage());
-                        } else {
-                            $this->cache = new PrefixCache(new FileCache(__CONF__.'/cache', new \Amp\Sync\LocalKeyedMutex()), 'amphp-cache-');
-                        }
-                    });
-                }
-
-            }
-        });
-        // =================================================================
     }
 
     public function createFolders() {
