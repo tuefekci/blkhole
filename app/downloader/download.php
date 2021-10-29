@@ -128,8 +128,8 @@ class Download {
                     $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
                     $request = new \Amp\Http\Client\Request($this->url);
-                    $request->setBodySizeLimit(99999 * 1024 * 1024);
-                    $request->setTransferTimeout(12 * 60 * 60 * 1000);
+                    $request->setBodySizeLimit((int)(99999 * 1024 * 1024));
+                    $request->setTransferTimeout((int)(12 * 60 * 60 * 1000));
                     //$request->setTlsHandshakeTimeout(1);
     
                     $client->request($request)->onResolve(function ($error, $response) use ($app, $file) {

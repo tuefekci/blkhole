@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "97033348823c41d731ed792866637520",
+    "content-hash": "f3611aa4ebb759937d214ca1675f5cf0",
     "packages": [
         {
             "name": "amphp/amp",
@@ -2100,10 +2100,16 @@
         {
             "name": "tuefekci/helpers",
             "version": "dev-main",
-            "dist": {
-                "type": "path",
-                "url": "../helpers",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/tuefekci/helpers.git",
                 "reference": "0b623092fa2b3b4697f41b3a0d047045297620c5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/tuefekci/helpers/zipball/0b623092fa2b3b4697f41b3a0d047045297620c5",
+                "reference": "0b623092fa2b3b4697f41b3a0d047045297620c5",
+                "shasum": ""
             },
             "require": {
                 "php": "^7.0"
@@ -2115,34 +2121,22 @@
                 "phpunit/phpunit": "^6.0",
                 "squizlabs/php_codesniffer": "^3.0"
             },
+            "default-branch": true,
             "type": "project",
             "autoload": {
                 "psr-4": {
                     "tuefekci\\helpers\\": "src/"
                 }
             },
-            "scripts": {
-                "test": [
-                    "@php vendor/bin/phpunit"
-                ],
-                "psr2check": [
-                    "@php vendor/bin/phpcs --standard=PSR2 src/"
-                ],
-                "psr2autofix": [
-                    "@php vendor/bin/phpcbf --standard=PSR2 src/"
-                ],
-                "docs": [
-                    "@php vendor/bin/phpdoc -d \"src\" -t \"docs\""
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
             "authors": [
                 {
                     "name": "Giacomo Tüfekci",
-                    "homepage": "http://giacomo.tuefekci.de",
                     "email": "kontakt@tuefekci.de",
+                    "homepage": "http://giacomo.tuefekci.de",
                     "role": "Developer"
                 }
             ],
@@ -2152,13 +2146,11 @@
                 "helpers"
             ],
             "support": {
-                "source": "http://github.com/tuefekci/helpers",
                 "docs": "https://github.com/tuefekci/helpers/blob/master/README.md",
-                "issues": "https://github.com/tuefekci/helpers/issues"
+                "issues": "https://github.com/tuefekci/helpers/issues",
+                "source": "http://github.com/tuefekci/helpers"
             },
-            "transport-options": {
-                "relative": true
-            }
+            "time": "2021-10-26T17:59:02+00:00"
         },
         {
             "name": "wa72/simplelogger",

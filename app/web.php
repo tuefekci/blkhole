@@ -54,7 +54,8 @@ class Web {
             return $_this->index();
         }));
 
-        $this->router->addRoute('GET', '/hello', new CallableRequestHandler(function () {
+        $this->router->addRoute('GET', '/restart', new CallableRequestHandler(function () {
+            die("RESTART");
             return new Response(Status::OK, ['content-type' => 'text/plain'], 'Hello, world!'.time());
         }));
 
@@ -87,7 +88,8 @@ class Web {
                                     $app->error("webinterface->blackhole->checkFolder->doesNotExists??", $error->getMessage());
                                 } else {
                                     if($exists) {
-                                        $app->filesystem->write(__BLACKHOLE__."/webinterface/".\tuefekci\helpers\Strings::normalizeString($magnet['filename']).".magnet", $magnetRaw);
+
+                                        $app->filesystem->write(__BLACKHOLE__."/webinterface/".$magnet['filename'].".magnet", $magnetRaw);
                                     }
                                 }
                     
