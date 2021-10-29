@@ -1,0 +1,15 @@
+version: "2.4"
+services:
+  radarr:
+    image: blkhole:latest
+    container_name: blkhole
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=Europe/London
+    volumes:
+      - /srv/blkhole/downloads:/srv/blkhole/data/downloads
+      - /srv/blkhole/blackhole:/srv/blkhole/data/blackhole
+    ports:
+      - 8107:1337
+    restart: unless-stopped
