@@ -1,6 +1,6 @@
 version: "2.4"
 services:
-  radarr:
+  blkhole:
     image: blkhole:latest
     container_name: blkhole
     environment:
