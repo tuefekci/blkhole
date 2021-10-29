@@ -32,6 +32,7 @@ class App {
 
 
         $this->createFolders();
+
     }
 
     public function createFolders() {
@@ -274,7 +275,7 @@ class App {
 
         $this->filesystem->listFiles(__BLACKHOLE__)->onResolve(function ($error, $files) {
             if ($error) {
-                $this->error("torrents", $error->getMessage());
+                $this->error("torrents listFiles", $error->getMessage());
             } else {
 
                 foreach($files as $file) {
@@ -284,7 +285,7 @@ class App {
 
                         $this->filesystem->listFiles(__BLACKHOLE__.DIRECTORY_SEPARATOR.$file)->onResolve(function ($error, $files) use ($path) {
                             if ($error) {
-                                $this->error("torrents", $error->getMessage());
+                                $this->error("torrents listFiles", $error->getMessage());
                             } else {
 
                                 foreach($files as $file) {
