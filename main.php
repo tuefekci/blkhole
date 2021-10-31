@@ -10,22 +10,24 @@ require_once(__DIR__ . '/vendor/autoload.php');
 
 use Amp\Loop;
 
+\tuefekci\helpers\Cli::banner("blkhole", "https://github.com/tuefekci/blkhole");
+
 // =================================================================
 // Defines
 // Static
 define("__ROOT__", realpath(__DIR__));
-define("__APP__", realpath(__ROOT__."/app"));
-define("__DATA__", realpath(__ROOT__."/data"));
-define("__PUBLIC__", realpath(__ROOT__."/web/build"));
+define("__APP__", __ROOT__."/app");
+define("__DATA__", __ROOT__."/data");
+define("__PUBLIC__", __ROOT__."/web/build");
 
 // Dynamic
-define("__CONF__", realpath(__DATA__."/config"));
-define("__LOGS__", realpath(__DATA__."/logs"));
-define("__CACHE__", realpath(__DATA__."/cache"));
-define("__TMP__", realpath(__DATA__."/tmp"));
+define("__CONF__", __DATA__."/config");
+define("__LOGS__", __DATA__."/logs");
+define("__CACHE__", __DATA__."/cache");
+define("__TMP__", __DATA__."/tmp");
 
-define("__BLACKHOLE__", realpath(__DATA__."/blackhole"));
-define("__DOWNLOADS__", realpath(__DATA__."/downloads")); 
+define("__BLACKHOLE__", __DATA__."/blackhole");
+define("__DOWNLOADS__", __DATA__."/downloads"); 
 // =================================================================
 
 // =================================================================
@@ -57,6 +59,7 @@ define("VERBOSE", true);
 // =================================================================
 // Start Application
 Loop::run(function() {
+
     $app = new \tuefekci\blk\App();
     $web = new \tuefekci\blk\Web($app);
 

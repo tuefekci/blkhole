@@ -20,19 +20,27 @@ class Download {
     public $secData = 0;
     public $secDataHistory = [];
 
+    // Chunks
+    public $chunkSize = 0;
+    public $chunkCount = 0;
+    public $chunkCurrent = 0;
+    public $chunkDone = 0;
+    public $chunkError = 0;
 
-    private \tufekci\blk\App $app;
+
+
+    private $app;
     private \Amp\Http\Client\HttpClient $client;
 
     public function __construct($manager, $id, $path, $url, $size=false) {
 
-        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $this->client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
         $this->app = $manager->app;
         $this->manager = $manager;
 
         $app = $manager->app;
-        $app->info("added ".$url, "Download");
+        $app->logger->log("INFO", "[DownloadClient] Download added ".$url);
 
         $this->id = $id;
         $this->path = $path;
@@ -47,7 +55,7 @@ class Download {
 
         $app->filesystem->exists($this->dir)->onResolve(function ($error, $exists) use ($app) {
             if ($error) {
-                $app->error("download->createFolder", $error->getMessage());
+                $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
             } else {
 
                 if($exists) {
@@ -55,7 +63,7 @@ class Download {
                 } else {
                     $app->filesystem->createDirectoryRecursively($this->dir)->onResolve(function ($error, $value) use ($app) {
                         if ($error) {
-                            $app->error("download->createFolder", $error->getMessage());
+                            $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
                         } else {
                             $this->download();
                         }
@@ -67,9 +75,9 @@ class Download {
         });
 
         
-        \Amp\Loop::repeat($msInterval = 60000, function ($watcherId) use ($app) {
+        \Amp\Loop::repeat($msInterval = 10000, function ($watcherId) use ($app) {
 
-            $this->app->info($this->percent."% / speed: ".$this->speed." / tta: ".$this->time , "download->".$this->path);
+            $app->logger->log("DEBUG", "[DownloadClient] ".$this->percent."% / speed: ".$this->speed." / tta: ".$this->time , "download->".$this->path);
 
             if($this->done) {
                 \Amp\Loop::cancel($watcherId);
@@ -86,9 +94,6 @@ class Download {
             $this->secData = 0;
 
             $this->speed = array_sum($this->secDataHistory)/count($this->secDataHistory);
-            $this->speedText = $app->filesize_formatted($this->speed);
-
-            $this->sizeText = $app->filesize_formatted($this->size);
 
             if(!empty($this->size) && !empty($this->currentSize) && !empty($this->speed)) {
                 $this->time = ($this->size-$this->currentSize)/$this->speed;
@@ -104,11 +109,30 @@ class Download {
         return $this;
     }
 
+    private function initChunks() {
+        //============================================================
+        // Chunk Settings
+        $this->chunkSize = 32 * 1024 * 1024; // 32MB 
+        $this->chunkCount = ceil($this->size / $this->chunkSize);
+        $this->chunkCurrent = 0;
+        $this->chunkDone = 0;
+        $this->chunkError = 0;
+        //============================================================
+    }
+
     private function speedLimit() {
-        if(count($this->manager->downloads)) {
-            $this->speedLimit = (int) ((int)$this->manager->app->config['manager']['bandwith']*1000)/count($this->manager->downloads);
+
+        if(\tuefekci\helpers\Store::has("DOWNLOAD_BANDWIDTH")) {
+            $bandwidth = \tuefekci\helpers\Store::get("DOWNLOAD_BANDWIDTH");
         } else {
-            $this->speedLimit = ((int)$this->manager->app->config['manager']['bandwith']*1000);
+            $this->app->logger->log("ERROR", "[DownloadClient] No DOWNLOAD_PARALLEL found, please set it in the settings.");
+        }
+
+
+        if(count($this->manager->downloads)) {
+            $this->speedLimit = (int) ((int)$bandwidth*1000)/count($this->manager->downloads);
+        } else {
+            $this->speedLimit = ((int)$bandwidth*1000);
         }
     }
 
@@ -132,8 +156,8 @@ class Download {
         $client->request($req)->onResolve(function ($error, $response) use ($app) {
 
             if($error) {
-                $app->error("download->getHeaders", $error->getMessage());
-                $this->error = true;
+                $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
+                $this->error[] = "download->getHeaders";
                 return;
             }
 
@@ -148,8 +172,6 @@ class Download {
                 $this->sizeText = $app->filesize_formatted($this->size);
                 $this->speedLimit();
             }
-
-            $this->done = true;
 
         });
 
@@ -171,7 +193,7 @@ class Download {
 
         $app->filesystem->touch($this->path)->onResolve(function ($error, $value) use ($app) {
             if ($error) {
-                $app->error("download->createFile", $error->getMessage());
+                $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
             } else {
 
                 $file = yield \Amp\File\openFile($this->path, "w");
@@ -189,7 +211,7 @@ class Download {
                     $client->request($request)->onResolve(function ($error, $response) use ($app, $file) {
     
                         if ($error) {
-                            $app->error("download->request", $error->getMessage());
+                            $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
     
                             $this->manager->remove($this->id);
                             $this->manager->add($this->id, $this->path, $this->url, $this->size);
@@ -222,15 +244,16 @@ class Download {
                             yield $file->close();
                             $this->done = true;
     
-                            $app->info("completed ".$this->url, "Download");
+                            $app->logger->log("INFO", "[DownloadClient] Download completed ".$this->path);
     
                         }
     
     
                     });
 
-                } catch (\Throwable|\Amp\Http\Client\TimeoutException $th) {
-                    $app->error("download->request", $th->getMessage());
+                } catch (\Throwable|\Amp\Http\Client\TimeoutException $error) {
+
+                    $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
     
                     $this->manager->remove($this->id);
                     $this->manager->add($this->id, $this->path, $this->url, $this->size);

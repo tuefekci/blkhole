@@ -6,22 +6,28 @@ use Amp\Loop;
 
 class Manager {
 
-    public \tufekci\blk\App $app;
+    public $app;
 
     public $downloads = [];
     public $downloadQueue = [];
     public $downloadsDone = [];
 
-    public $paralel = 3;
+    public $parallel = 3;
 
     public function __construct($app) {
         $this->app = $app;
 
-        $this->app->log("loaded", $this->getNameOfClass());
+        $app->logger->log("INFO", "loaded->".$this->getNameOfClass());
 
         Loop::repeat($msInterval = 1000, function () {
             $this->stats();
             $this->cycle();
+        });
+
+        Loop::repeat($msInterval = 10000, function () {
+            if (count($this->downloadQueue) > 0) {
+                $this->app->logger->log("INFO", "DownloadClient ".count($this->downloadQueue)." downloads in queue, ".count($this->downloads)." downloads in progress, ".count($this->downloadsDone)." downloads finished.");
+            }
         });
 
     }
@@ -32,9 +38,17 @@ class Manager {
     }
 
     public function cycle() {
+
+        if(\tuefekci\helpers\Store::has("DOWNLOAD_PARALLEL")) {
+            $this->parallel = \tuefekci\helpers\Store::get("DOWNLOAD_PARALLEL");
+        } else {
+            $this->app->logger->log("ERROR", "[DownloadClient] No DOWNLOAD_PARALLEL found, please set it in the settings.");
+        }
+
+
         // ===============================================================
         // Handle downloadQueue
-        if(!empty($this->downloadQueue) && (int)$this->app->config['downloader']['paralel'] > count($this->downloads)) {
+        if(!empty($this->downloadQueue) && (int)$this->parallel > count($this->downloads)) {
             $dlData = $this->downloadQueue[array_key_first($this->downloadQueue)];
             unset($this->downloadQueue[array_key_first($this->downloadQueue)]);
 
@@ -46,12 +60,44 @@ class Manager {
         if(!empty($this->downloads)) {
             foreach($this->downloads as $id => $download) {
                 if($download->done) {
-                    $this->downloadsDone[$download->id] = $download;
-                    unset($this->downloads[$download->id]);
+
+                    if($download->size !== $download->currentSize) {
+                        $download->error[] = "size mismatch";
+                    }
+
+
+                    if($download->error) {
+
+                        // Download has issues, remove it from the list and add it to the download list
+                        if(is_array($download->error)) {
+                            $error = implode("; ", $download->error);
+                        } else {
+                            $error = $download->error;
+                        }
+
+                        $this->app->logger->log("ERROR", "[DownloadClient] Download ".$id." failed: ".$error);
+
+                        $this->remove($download->id);
+                        $this->manager->add($download->id, $download->path, $download->url, $download->size);
+
+                    } else {
+
+                        // Download is done!
+                        $this->remove($download->id);
+                        $this->downloadsDone[$download->id] = $download;
+                        $this->app->logger->log("INFO", "[DownloadClient] Download ".$id." finished.");
+
+                    }
+
+
+
+                    
+
                 }
             }
         }
     }
+
 
 
     public function stats() {

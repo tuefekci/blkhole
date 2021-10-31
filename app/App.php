@@ -20,10 +20,17 @@ class App {
     public function __construct() {
         $app = $this;
 
+        // =================================================================
+        // Init Utilities
         $this->filesystem = filesystem();
+        $this->logger = new \tuefekci\helpers\Logger();
 
         // =================================================================
-        // Init Environment & Config Variables
+        // Create needed folders for the Application
+        $this->createFolders();
+
+        // =================================================================
+        // Check every possible config option and set it to the store.
 
         // If store exists load it.
         if(\tuefekci\helpers\Files::exists(__CONF__.'/store.blk')) {
@@ -74,31 +81,18 @@ class App {
 
         }
 
-        // =================================================================
-        // Check every possible config option and set it to the store.
-
-
-
-        var_dump(\tuefekci\helpers\Store::all());
-
-        die();
+        //\tuefekci\helpers\Store::save(__CONF__.'/store.blk');
 
         // =================================================================
-        // Create needed folders for the Application
-        $this->createFolders();
 
-        // =================================================================
-        // Init Utilities
-        
-        $this->logger = new \tuefekci\helpers\Logger();
+        return $this;
+
 
     }
 
     public function run() {
 
         $app = $this;
-
-        \tuefekci\helpers\Cli::banner("blkhole", "https://github.com/tuefekci/blkhole");
 
         // =================================================================
         // init Providers
@@ -107,7 +101,7 @@ class App {
 
         // =================================================================
         // init Download Clients
-        $downloadClient = new DownloadClient\Controller($this);
+        $downloadClient = new DownloadClient\Manager($this);
         $this->downloadClient = $downloadClient;
 
         // =================================================================
@@ -115,10 +109,6 @@ class App {
         Loop::repeat($msInterval = 1000, function () {
             //var_dump($this->torrents);
             //var_dump($this->magnets);
-        });
-
-        \Amp\Loop::repeat($msInterval = 10000, function () use ($provider) {
-            $provider->getStatus();
         });
 
         \Amp\Loop::repeat($msInterval = 5000, function () {
@@ -164,30 +154,37 @@ class App {
 
     public function createFolder($path) {
         $app = $this;
-        $path = realpath($path);
+        $path = $path;
 
-        $app->filesystem->exists($path)->onResolve(function ($error, $exists) use ($app, $path) {
-            if ($error) {
-                $app->error("createFolder->checkFolder", $error->getMessage());
-
-
-            } else {
-
-                if($exists) {
-
+        try {
+            $app->filesystem->exists($path)->onResolve(function ($error, $exists) use ($app, $path) {
+                if ($error) {
+                    $app->logger->log("ERROR", "createFolder->checkFolder (".$path.")", ['exception' => $error]);
                 } else {
-                    $app->filesystem->createDirectoryRecursively($path)->onResolve(function ($error, $value) use ($app, $path) {
-                        if ($error) {
-                            $app->error("createFolder->createFolder", $error->getMessage());
-                        } else {
+    
+                    if($exists) {
+    
+                    } else {
 
-                        }
-                    });
+                        $app->logger->log("DEBUG", "createFolder (".$path.")");
+
+                        $app->filesystem->createDirectoryRecursively($path)->onResolve(function ($error, $value) use ($app, $path) {
+                            if ($error) {
+                                $app->logger->log("ERROR", "createFolder->createFolder (".$path.")", ['exception' => $error]);
+                            } else {
+    
+                            }
+                        });
+                    }
+    
                 }
+    
+            });
+        } catch (\Throwable $error) {
+            //throw $th;
+            $app->logger->log("ERROR", "createFolder->createFolderCatch (".$path.")", ['exception' => $error]);
+        }
 
-            }
-
-        });
     }
 
     // Check Downloads for completed downloads and then clean up!
@@ -255,7 +252,7 @@ class App {
                                 // Get Download Link
                                 $this->provider->getDownload($link->link)->onResolve(function ($error, $data) use ($_this, $magnet, $key, $link) {
                                     if ($error) {
-                                        $_this->error("handleMagnets->addMagnet", $error->getMessage());
+                                        $_this->logger->log("ERROR", "handleMagnets->addMagnet", ['exception' => $error]);
                                     } else {
 
                                         // Start Download
@@ -293,12 +290,12 @@ class App {
 
                 $this->filesystem->read($path)->onResolve(function ($error, $magnet) use ($_this, $path) {
                     if ($error) {
-                        $this->error("handleMagnets->read", $error->getMessage());
+                        $_this->logger->log("ERROR", "handleMagnets->read", ['exception' => $error]);
                     } else {
 
                         $this->provider->addMagnet($magnet)->onResolve(function ($error, $data) use ($_this, $path) {
                             if ($error) {
-                                $this->error("handleMagnets->addMagnet", $error->getMessage());
+                                $_this->logger->log("ERROR", "handleMagnets->addMagnet", ['exception' => $error]);
                             } else {
                                 $_this->magnets[$path]['provider'] = $data;
                             }
@@ -320,7 +317,7 @@ class App {
 
         $this->filesystem->listFiles(__BLACKHOLE__)->onResolve(function ($error, $files) {
             if ($error) {
-                $this->error("torrents listFiles", $error->getMessage());
+                $this->logger->log("ERROR", "torrents listFiles", ['exception' => $error]);
             } else {
 
                 foreach($files as $file) {
@@ -330,7 +327,7 @@ class App {
 
                         $this->filesystem->listFiles(__BLACKHOLE__.DIRECTORY_SEPARATOR.$file)->onResolve(function ($error, $files) use ($path) {
                             if ($error) {
-                                $this->error("torrents listFiles", $error->getMessage());
+                                $this->logger->log("ERROR", "torrents listFiles", ['exception' => $error]);
                             } else {
 
                                 foreach($files as $file) {
@@ -362,43 +359,6 @@ class App {
             }
         });
         
-    }
-
-    private function out($color, $message, $header=false) {
-
-        $this->cli->$color()->inline("[".date("Y-m-d H:i:s")."] ");
-
-        if($header && is_string($header)) {
-            $this->cli->$color()->inline("(".$header.") ");
-        }
-
-        if(is_string($message)) {
-            $this->cli->inline($message);
-            $this->cli->break();
-        } elseif(is_array($message)) {
-            var_dump($message);
-        } else {
-            $this->cli->break();
-        }
-    }
-
-    public function log($message, $header=false) {
-        $this->out("Yellow", $message, $header);
-    }
-
-    public function info($message, $header=false) {
-        if(!VERBOSE) {
-            return true;
-        }
-        $this->out("Cyan", $message, $header);
-    }
-
-    public function warn($message, $header=false) {
-        $this->out("Orange", $message, $header);
-    }
-
-    public function error($message, $header=false) {
-        $this->out("Red", $message, $header);
     }
 
     function filesize_formatted($size)

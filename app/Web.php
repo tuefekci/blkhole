@@ -101,7 +101,7 @@ class Web {
 
             } catch (\Throwable $th) {
                 //throw $th;
-                var_dump($th->getMessage());
+                $_this->app->logger->log("ERROR", $th->getMessage(), $th);
             }
 
 
@@ -109,7 +109,7 @@ class Web {
         }));
 
 
-        $this->router->addRoute('GET', '/status', new CallableRequestHandler(function () {
+        $this->router->addRoute('GET', '/status', new CallableRequestHandler(function () use ($_this) {
 
             try {
                 $data = $this->app->magnets;
@@ -144,8 +144,7 @@ class Web {
                 return new Response(Status::OK, ['content-type' => 'text/json'], $returnData);
             } catch (\Throwable $th) {
                 //throw $th;
-                var_dump($th);
-                die();
+                $_this->app->logger->log("ERROR", $th->getMessage(), $th);
             }
 
         }));
@@ -159,16 +158,16 @@ class Web {
 
             try {
                 //$args = $request->getAttributes();
-            } catch (\Throwable $e) {
-                # code...
+            } catch (\Throwable $error) {
+                $_this->app->logger->log("ERROR", $error->getMessage(), $error);
             }
 
             try {
                 if($this->filesystem->exists($path) && $this->filesystem->isFile($path)) {
                     return new Response(Status::OK, ['Access-Control-Allow-Origin'=>'*'], yield $this->filesystem->read($path));
                 }
-            } catch (\Throwable $e) {
-                var_dump($e->getMessage());
+            } catch (\Throwable $error) {
+                $_this->app->logger->log("ERROR", $error->getMessage(), $error);
             }
 
 
@@ -198,9 +197,17 @@ class Web {
 
         \Amp\Loop::run(static function () use ($_this) {
 
+            $port = 1337;
+
+            if(\tuefekci\helpers\Store::has("WEBINTERFACE_PORT")) {
+                $port = \tuefekci\helpers\Store::get("WEBINTERFACE_PORT");
+            } else {
+                $_this->app->logger->log("ERROR", "[WebInterface] No Port found, please set it in the settings.");
+            }
+
             $servers = [
-                Socket\Server::listen("0.0.0.0:".(int)$_this->app->config['web']['port']),
-                Socket\Server::listen("[::]:".(int)$_this->app->config['web']['port']),
+                Socket\Server::listen("0.0.0.0:".(int)$port),
+                Socket\Server::listen("[::]:".(int)$port),
             ];
 
             $server = new HttpServer($servers, $_this->router, $_this->app->logger);

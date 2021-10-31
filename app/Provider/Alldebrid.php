@@ -4,18 +4,24 @@ namespace tuefekci\blk\Provider;
 
 class Alldebrid extends ProviderInterface {
 
-    public $config;
     public $agent;
     public $apiKey;
     public $apiUrl;
 
-    public array $status = array();
-
     public function __construct($app) {
         parent::__construct($app);
 
-        $this->agent = $app->config['alldebrid']['agent'];
-        $this->apiKey = $app->config['alldebrid']['apiKey'];
+        $this->agent = "blkhole";
+        if(\tuefekci\helpers\Store::has("ALLDEBRID_AGENT")) {
+            $this->agent = \tuefekci\helpers\Store::get("ALLDEBRID_AGENT");
+        }
+
+        if(\tuefekci\helpers\Store::has("ALLDEBRID_APIKEY")) {
+            $this->apiKey = \tuefekci\helpers\Store::get("ALLDEBRID_APIKEY");
+        } else {
+            $app->logger->log("ERROR", "[Alldebrid] No API key found, please set it in the settings.");
+        }
+
         $this->apiUrl = "https://api.alldebrid.com/v4/";
     }
 
@@ -29,13 +35,13 @@ class Alldebrid extends ProviderInterface {
 
         $app = $this->app;
  
-        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $client = $this->client;
         $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/upload?agent=".$this->agent ."&apikey=".$this->apiKey."&magnets[]=".urlencode($magnet));
 
         $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
 
             if ($error) {
-                $app->error("addMagnet->request", $error->getMessage());
+                $app->logger->log("ERROR", "[Alldebrid] addMagnet->request", ['exception'=>$error]);
             } else {
                 $data = yield $response->getBody()->buffer();
                 $data = json_decode($data);
@@ -59,19 +65,19 @@ class Alldebrid extends ProviderInterface {
 
         $app = $this->app;
  
-        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $client = $this->client;
         $request = new \Amp\Http\Client\Request($this->apiUrl."link/unlock?agent=".$this->agent ."&apikey=".$this->apiKey."&link=".urlencode($link));
 
         $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred, $link) {
 
             if ($error) {
-                $app->error("getDownload->request", $error->getMessage());
+                $app->logger->log("ERROR", "[Alldebrid] addMagnet->request", ['exception'=>$error]);
             } else {
                 $data = yield $response->getBody()->buffer();
                 $data = json_decode($data);
 
                 if($data->status == "success") {
-                    $app->info($data->status, "Alldebrid->getDownload(".$link.")");
+                    $app->logger->log("INFO", "[Alldebrid] getDownload->(".$link.")", ['status'=>$data->status, 'exception'=>$error]);
 
                     if(isset($data->data->delayed)) {
                         $deferred->fail(new \Throwable("Download link delayed."));
@@ -95,7 +101,7 @@ class Alldebrid extends ProviderInterface {
 
         $app = $this->app;
  
-        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $client = $this->client;
         $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/delete?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id);
 
         $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
@@ -121,7 +127,9 @@ class Alldebrid extends ProviderInterface {
     }
 
     public function restart($id) {
-        return $this->app->browserGet($this->apiUrl."magnet/restart?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id)->then(function($response) {
+        $_this = $this;
+
+        return $this->app->browserGet($this->apiUrl."magnet/restart?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id)->then(function($response) use ($_this) {
             
             $data = json_decode($response->body);
 
@@ -129,19 +137,9 @@ class Alldebrid extends ProviderInterface {
                 return $data->data;
             }
 
-        }, function ($e) use ($id) {
-            $this->app->error($e->getMessage(), "Alldebrid->delete(".$id.")");
+        }, function ($error) use ($id, $_this) {
+            $_this->app->logger->log("ERROR", "[Alldebrid] delete->(".$id.")", ['exception'=>$error]);
         });
-    }
-
-    public function status($id=null) {
-
-        if($id) {
-            return $this->status[$id];
-        } else {
-            return $this->status;
-        }
-        
     }
 
 
@@ -149,13 +147,13 @@ class Alldebrid extends ProviderInterface {
 
         $app = $this->app;
  
-        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
+        $client = $this->client;
         $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/status?agent=".$this->agent ."&apikey=".$this->apiKey);
 
         $client->request($request)->onResolve(function ($error, $response) use ($app) {
 
             if ($error) {
-                $app->error("getStatus->request", $error->getMessage());
+                $app->logger->log("ERROR", "[Alldebrid] getStatus->request", ['exception'=>$error]);
             } else {
 
                 $data = yield $response->getBody()->buffer();
