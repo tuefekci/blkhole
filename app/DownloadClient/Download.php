@@ -1,35 +1,37 @@
 <?php
 
-namespace GT\BLK\Downloader;
+namespace tuefekci\blk\DownloadClient;
 
 class Download {
 
     public $done = false;
+    public $paused = false;
     public $error = false;
     public $id = false;
     public $path = false;
     public $dir = false;
     public $url = false;
     public $size = 0;
-    public $sizeText;
     public $currentSize = 0;
     public $percent = 0;
     public $speed = 0;
-    public $speedText = "";
     public $speedLimit = 0;
     public $time;
-    public $timeText;
     public $secData = 0;
     public $secDataHistory = [];
 
+
     private $app;
+    private \Amp\Http\Client\HttpClient $client;
 
-    public function __construct($downloader, $id, $path, $url, $size=false) {
+    public function __construct($manager, $id, $path, $url, $size=false) {
 
-        $this->app = $downloader->app;
-        $this->downloader = $downloader;
+        $client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
-        $app = $downloader->app;
+        $this->app = $manager->app;
+        $this->manager = $manager;
+
+        $app = $manager->app;
         $app->info("added ".$url, "Download");
 
         $this->id = $id;
@@ -67,7 +69,7 @@ class Download {
         
         \Amp\Loop::repeat($msInterval = 60000, function ($watcherId) use ($app) {
 
-            $this->app->info($this->percent."% / speed: ".$this->speedText." / tta: ".$this->timeText , "download->".$this->path);
+            $this->app->info($this->percent."% / speed: ".$this->speed." / tta: ".$this->time , "download->".$this->path);
 
             if($this->done) {
                 \Amp\Loop::cancel($watcherId);
@@ -103,13 +105,65 @@ class Download {
     }
 
     private function speedLimit() {
-        if(count($this->downloader->downloads)) {
-            $this->speedLimit = (int) ((int)$this->downloader->app->config['downloader']['bandwith']*1000)/count($this->downloader->downloads);
+        if(count($this->manager->downloads)) {
+            $this->speedLimit = (int) ((int)$this->manager->app->config['manager']['bandwith']*1000)/count($this->manager->downloads);
         } else {
-            $this->speedLimit = ((int)$this->downloader->app->config['downloader']['bandwith']*1000);
+            $this->speedLimit = ((int)$this->manager->app->config['manager']['bandwith']*1000);
         }
     }
- 
+
+    /**
+     * Get Headers
+     * 
+     * gets the headers for the requested download so we can determine how many chunks etc.
+     * 
+     * @return void
+     */
+    public function getHeaders() {
+
+        $this->app->info("getHeaders", "Download");
+
+        $app = $this->app;
+
+        $req = new \Amp\Http\Client\Request($this->url);
+        $req->setHeader('Range', 'bytes=0-1');
+
+        $client = new \Amp\Http\Client\HttpClient;
+        $client->request($req)->onResolve(function ($error, $response) use ($app) {
+
+            if($error) {
+                $app->error("download->getHeaders", $error->getMessage());
+                $this->error = true;
+                return;
+            }
+
+            if($response->getStatus() == 206) {
+                $headers = $response->getHeaders();
+
+                $this->size = $headers['content-length'][0];
+                $this->sizeText = $app->filesize_formatted($this->size);
+                $this->speedLimit();
+            } else {
+                $this->size = $response->getHeaders()['content-length'][0];
+                $this->sizeText = $app->filesize_formatted($this->size);
+                $this->speedLimit();
+            }
+
+            $this->done = true;
+
+        });
+
+
+    }
+    
+
+
+
+    /**
+     * Start Download
+     * 
+     * @return void
+     */
     private function download() {
 
 
@@ -137,8 +191,8 @@ class Download {
                         if ($error) {
                             $app->error("download->request", $error->getMessage());
     
-                            $this->downloader->remove($this->id);
-                            $this->downloader->add($this->id, $this->path, $this->url, $this->size);
+                            $this->manager->remove($this->id);
+                            $this->manager->add($this->id, $this->path, $this->url, $this->size);
                         } else {
     
                             $headers = $response->getHeaders();
@@ -178,8 +232,8 @@ class Download {
                 } catch (\Throwable|\Amp\Http\Client\TimeoutException $th) {
                     $app->error("download->request", $th->getMessage());
     
-                    $this->downloader->remove($this->id);
-                    $this->downloader->add($this->id, $this->path, $this->url, $this->size);
+                    $this->manager->remove($this->id);
+                    $this->manager->add($this->id, $this->path, $this->url, $this->size);
                 }
 
 
@@ -187,5 +241,24 @@ class Download {
         });
 
     }
+
+    /**
+     * Pause Download
+     * 
+     * @return void
+     */
+    public function pause() {
+        $this->paused = true;
+    } 
+
+    /**
+     * Resume Download
+     * 
+     * @return void
+     */ 
+    public function unpause() {
+        $this->paused = false;
+    } 
+
 
 }

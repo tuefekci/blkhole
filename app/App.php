@@ -1,6 +1,6 @@
 <?php
 
-namespace GT\BLK;
+namespace tuefekci\blk;
 
 use Amp\Cache\Cache;
 use Amp\Cache\FileCache;

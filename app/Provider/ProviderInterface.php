@@ -1,6 +1,6 @@
 <?php
 
-namespace GT\BLK\Provider;
+namespace tuefekci\blk\Provider;
 
 class ProviderInterface {
 

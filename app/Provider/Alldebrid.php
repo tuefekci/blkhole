@@ -1,6 +1,6 @@
 <?php
 
-namespace GT\BLK\Provider;
+namespace tuefekci\blk\Provider;
 
 class Alldebrid extends ProviderInterface {
 
@@ -14,14 +14,8 @@ class Alldebrid extends ProviderInterface {
     public function __construct($app) {
         parent::__construct($app);
 
-        if(!isset($app->config) || empty($app->config)) {
-            $this->agent = "apiShowcase";
-            $this->apiKey = "apiShowcaseStaticApikey";
-        } else {
-            $this->agent = $app->config['alldebrid']['agent'];
-            $this->apiKey = $app->config['alldebrid']['apiKey'];
-        }
-
+        $this->agent = $app->config['alldebrid']['agent'];
+        $this->apiKey = $app->config['alldebrid']['apiKey'];
         $this->apiUrl = "https://api.alldebrid.com/v4/";
     }
 

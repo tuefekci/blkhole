@@ -1,10 +1,10 @@
 <?php
 
-namespace GT\BLK\Downloader;
+namespace tuefekci\blk\DownloadClient;
 
 use Amp\Loop;
 
-class Controller {
+class Manager {
 
     public $app;
 

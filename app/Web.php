@@ -1,6 +1,6 @@
 <?php
 
-namespace GT\BLK;
+namespace tuefekci\blk;
 
 use Amp\Http\Server\HttpServer;
 use Amp\Http\Server\RequestHandler\CallableRequestHandler;

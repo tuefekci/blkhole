@@ -7,6 +7,7 @@ services:
       - PUID=0
       - PGID=0
       - TZ=Europe/London
+      - MEMORY_LIMIT=1024M
     volumes:
       - /srv/blkhole/downloads:/srv/blkhole/data/downloads
       - /srv/blkhole/blackhole:/srv/blkhole/data/blackhole
