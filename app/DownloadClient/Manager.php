@@ -6,7 +6,7 @@ use Amp\Loop;
 
 class Manager {
 
-    public $app;
+    public \tufekci\blk\App $app;
 
     public $downloads = [];
     public $downloadQueue = [];

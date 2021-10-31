@@ -11,24 +11,6 @@ require_once(__DIR__ . '/vendor/autoload.php');
 use Amp\Loop;
 
 // =================================================================
-// Init Environment Variables
-
-if(\tuefekci\helpers\System::isDocker()) {
- 
-    // convert environment variables to constants
-    foreach ($_ENV as $key => $value) {
-        define($key, $value);
-    }
-
-} else {
-
-
-    $env = \tuefekci\helpers\System::getEnv();
-}
-
-
-
-// =================================================================
 // Defines
 // Static
 define("__ROOT__", realpath(__DIR__));
@@ -40,6 +22,7 @@ define("__PUBLIC__", realpath(__ROOT__."/web/build"));
 define("__CONF__", realpath(__DATA__."/config"));
 define("__LOGS__", realpath(__DATA__."/logs"));
 define("__CACHE__", realpath(__DATA__."/cache"));
+define("__TMP__", realpath(__DATA__."/tmp"));
 
 define("__BLACKHOLE__", realpath(__DATA__."/blackhole"));
 define("__DOWNLOADS__", realpath(__DATA__."/downloads")); 
@@ -73,9 +56,9 @@ define("VERBOSE", true);
 
 // =================================================================
 // Start Application
-Loop::run(function() use ($app, $web) {
-    $app = new tuefekci\blk\App();
-    $web = new tuefekci\blk\Web($app);
+Loop::run(function() {
+    $app = new \tuefekci\blk\App();
+    $web = new \tuefekci\blk\Web($app);
 
     $app->run();
     $web->run();

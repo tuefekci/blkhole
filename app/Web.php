@@ -8,19 +8,16 @@ use Amp\Http\Server\Response;
 use Amp\Http\Server\Request;
 use Amp\Http\Status;
 use Amp\Socket;
-
 use Amp\File\Filesystem;
-use function Amp\File\filesystem;
-
 use Amp\Promise;
 use Amp\Http\Server\Middleware;
 
 class Web {
 
-    private $documentRoot;
-    private $router;
+    private string $documentRoot;
+    private \Amp\Http\Server\Router $router;
 
-    private $app;
+    private App $app;
 
     private Filesystem $filesystem;
 
@@ -28,11 +25,9 @@ class Web {
 
         $_this = $this;
         $this->app = $app;
+        $this->filesystem = $this->app->filesystem;
         $this->documentRoot = realpath(__PUBLIC__);
         $this->router = new \Amp\Http\Server\Router;
-        $this->filesystem = filesystem();
-
-        //$this->router->stack($middleware);
 
         $middleware = new class implements Middleware {
             public function handleRequest(Request $request, \Amp\Http\Server\RequestHandler $next): Promise {
@@ -134,7 +129,7 @@ class Web {
                     if(!empty($magnet['downloads'])) {
                         foreach($magnet['downloads'] as $key => $download) {
     
-                            $info = $this->app->downloader->info($download);
+                            $info = $this->app->downloadClient->info($download);
                             if($info) {
                                 $data[$path]['downloads'][$key] = $info;
                             } else {
@@ -208,7 +203,7 @@ class Web {
                 Socket\Server::listen("[::]:".(int)$_this->app->config['web']['port']),
             ];
 
-            $server = new HttpServer($servers, $_this->router, new \Wa72\SimpleLogger\EchoLogger());
+            $server = new HttpServer($servers, $_this->router, $_this->app->logger);
         
             yield $server->start();
         

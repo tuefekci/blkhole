@@ -6,9 +6,10 @@ services:
     environment:
       - PUID=0
       - PGID=0
-      - TZ=Europe/London
+      - TZ=Europe/Berlin
       - MEMORY_LIMIT=1024M
     volumes:
+      - /srv/blkhole:/srv/blkhole/data
       - /srv/blkhole/downloads:/srv/blkhole/data/downloads
       - /srv/blkhole/blackhole:/srv/blkhole/data/blackhole
     ports:

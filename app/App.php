@@ -2,85 +2,95 @@
 
 namespace tuefekci\blk;
 
-use Amp\Cache\Cache;
-use Amp\Cache\FileCache;
-use Amp\Cache\PrefixCache;
-use Amp\Sync\LocalKeyedMutex;
-
-use Amp\Http\Client\HttpClientBuilder;
-use Amp\Http\Client\Request;
 use Amp\Loop;
 use Amp\File\File;
 use Amp\File\Filesystem;
 use function Amp\File\filesystem;
 
 class App {
-    public $cli;
-    public $config;
 
     public Filesystem $filesystem;
 
     public array $torrents = array();
     public array $magnets = array();
 
+    public \tuefekci\helpers\Logger $logger;
+    public \tuefekci\helpers\Store $store;
+
     public function __construct() {
         $app = $this;
 
         $this->filesystem = filesystem();
-        $this->cli = new \League\CLImate\CLImate;
-        $this->config = \Noodlehaus\Config::load(__CONF__.'/config.ini')->all();
+
+        // =================================================================
+        // Init Environment & Config Variables
+
+        // If store exists load it.
+        if(\tuefekci\helpers\Files::exists(__CONF__.'/store.blk')) {
+            \tuefekci\helpers\Store::load(__CONF__.'/store.blk');
+        }
+
+        // If running docker load env.
+        if(\tuefekci\helpers\System::isDocker()) {
+        
+            // convert environment variables to constants
+            foreach ($_ENV as $key => $value) {
+                if(!\tuefekci\helpers\Store::has($key)) {
+                    \tuefekci\helpers\Store::set($key, $value);
+                }
+            }
+
+        }
+
+        // If config.ini exists load it.
+        if(\tuefekci\helpers\Files::exists(__CONF__.'/config.ini')) {
+            $config = \Noodlehaus\Config::load(__CONF__.'/config.ini')->all();
+
+            if($config) {
+                foreach($config as $key => $value) {
+    
+                    $key = strtoupper($key);
+    
+                    if(is_array($value)) {
+    
+                        foreach($value as $subKey => $subValue) {
+                            $subKey = strtoupper($subKey);
+    
+                            if(!is_array($subValue)) {
+                                \tuefekci\helpers\Store::set($key."_".$subKey, $subValue);
+                            }
+                        }
+    
+                    } else {
+    
+                        if(!\tuefekci\helpers\Store::has($key)) {
+                            \tuefekci\helpers\Store::set($key, $value);
+                        }
+    
+                    }
+    
+                }
+            }
+
+        }
+
+        // =================================================================
+        // Check every possible config option and set it to the store.
 
 
+
+        var_dump(\tuefekci\helpers\Store::all());
+
+        die();
+
+        // =================================================================
+        // Create needed folders for the Application
         $this->createFolders();
 
-    }
-
-    public function createFolders() {
-
-
-        $app = $this;
-
-        // Webinterface Blackhole
-        $app->filesystem->exists(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $exists) use ($app) {
-            if ($error) {
-                $app->error("webinterface->checkFolder", $error->getMessage());
-            } else {
-
-                if($exists) {
-                    
-                } else {
-                    $app->filesystem->createDirectoryRecursively(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $value) use ($app) {
-                        if ($error) {
-                            $app->error("webinterface->createFolder", $error->getMessage());
-                        } else {
-                        }
-                    });
-                }
-
-            }
-
-        });
-
-        // Webinterface Downloads
-        $app->filesystem->exists(__DOWNLOADS__."/webinterface")->onResolve(function ($error, $exists) use ($app) {
-            if ($error) {
-                $app->error("webinterface->checkFolder", $error->getMessage());
-            } else {
-
-                if($exists) {
-                    
-                } else {
-                    $app->filesystem->createDirectoryRecursively(__DOWNLOADS__."/webinterface")->onResolve(function ($error, $value) use ($app) {
-                        if ($error) {
-                            $app->error("webinterface->createFolder", $error->getMessage());
-                        } else {
-                        }
-                    });
-                }
-
-            }
-
-        });
+        // =================================================================
+        // Init Utilities
+        
+        $this->logger = new \tuefekci\helpers\Logger();
 
     }
 
@@ -88,24 +98,17 @@ class App {
 
         $app = $this;
 
-        $this->cli->clear();
-        $this->cli->break();
-        $this->cli->lightGreen()->border("*");
-        $this->cli->lightGreen()->out('* blkHole');
-        $this->cli->lightGreen()->out('* (c) 2020-'.date("Y").' Giacomo Tüfekci');
-        $this->cli->lightGreen()->out('* https://github.com/tuefekci/blkhole');
-        $this->cli->lightGreen()->border("*");
-        $this->cli->lightGreen()->break();
+        \tuefekci\helpers\Cli::banner("blkhole", "https://github.com/tuefekci/blkhole");
 
         // =================================================================
-        // init providers
+        // init Providers
         $provider = new Provider\Alldebrid($this);
         $this->provider = $provider;
 
         // =================================================================
-        // init downloaders
-        $downloader = new Downloader\Controller($this);
-        $this->downloader = $downloader;
+        // init Download Clients
+        $downloadClient = new DownloadClient\Controller($this);
+        $this->downloadClient = $downloadClient;
 
         // =================================================================
         // loops
@@ -145,6 +148,48 @@ class App {
         // =================================================================
     }
 
+    // Create needed folders for the Application
+    public function createFolders() {
+        $app = $this;
+
+        $this->createFolder(__CONF__);
+        $this->createFolder(__LOGS__);
+        $this->createFolder(__CACHE__);
+        $this->createFolder(__TMP__);
+        $this->createFolder(__BLACKHOLE__);
+        $this->createFolder(__DOWNLOADS__);
+        $this->createFolder(__BLACKHOLE__."/webinterface");
+        $this->createFolder(__DOWNLOADS__."/webinterface");
+    }
+
+    public function createFolder($path) {
+        $app = $this;
+        $path = realpath($path);
+
+        $app->filesystem->exists($path)->onResolve(function ($error, $exists) use ($app, $path) {
+            if ($error) {
+                $app->error("createFolder->checkFolder", $error->getMessage());
+
+
+            } else {
+
+                if($exists) {
+
+                } else {
+                    $app->filesystem->createDirectoryRecursively($path)->onResolve(function ($error, $value) use ($app, $path) {
+                        if ($error) {
+                            $app->error("createFolder->createFolder", $error->getMessage());
+                        } else {
+
+                        }
+                    });
+                }
+
+            }
+
+        });
+    }
+
     // Check Downloads for completed downloads and then clean up!
     private function checkDownload() {
 
@@ -154,7 +199,7 @@ class App {
                 $check = array();
 
                 foreach($magnet['downloads'] as $dlId) {
-                    $download = $this->downloader->get($dlId);
+                    $download = $this->downloadClient->get($dlId);
 
                     if($download) {
                         $check[] = $download->done;
@@ -172,7 +217,7 @@ class App {
 
                     // remove downloads
                     foreach($magnet['downloads'] as $dlId) {
-                        $download = $this->downloader->remove($dlId);
+                        $download = $this->downloadClient->remove($dlId);
                     }
 
                     // remove from provider
@@ -215,7 +260,7 @@ class App {
 
                                         // Start Download
                                         $dlId = uniqid($magnet['provider']->id."_");
-                                        $this->downloader->add($dlId, __DOWNLOADS__."/".basename($magnet['dirname'])."/".$magnet['filename']."/".$data->filename, $data->link, $link->size);
+                                        $this->downloadClient->add($dlId, __DOWNLOADS__."/".basename($magnet['dirname'])."/".$magnet['filename']."/".$data->filename, $data->link, $link->size);
                                         $_this->magnets[$key]['downloads'][] = $dlId;
                                         
                                     }

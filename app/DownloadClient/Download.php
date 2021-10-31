@@ -21,7 +21,7 @@ class Download {
     public $secDataHistory = [];
 
 
-    private $app;
+    private \tufekci\blk\App $app;
     private \Amp\Http\Client\HttpClient $client;
 
     public function __construct($manager, $id, $path, $url, $size=false) {
