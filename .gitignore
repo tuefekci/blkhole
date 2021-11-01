@@ -27,6 +27,10 @@ composer.phar
 
 config.ini
 
-
-data/
+!data/config
+data/cache
+data/blackhole
+data/downloads
+data/logs
+data/tmp
 testFiles/
