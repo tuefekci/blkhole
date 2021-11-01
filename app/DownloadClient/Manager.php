@@ -114,6 +114,12 @@ class Manager {
             return false;
         }
 
+
+        $percent = 0;
+        if(!empty($download->currentSize) && !empty($download->size)) {
+            $percent = round(($download->currentSize / $download->size) * 100, 2);
+        }
+        
         return array(
             'done' => $download->done,
             'id' => $download->id,
@@ -121,11 +127,15 @@ class Manager {
             'dir' => $download->dir,
             'url' => $download->url,
             'size' => $download->size,
+            'sizeText' => \tuefekci\helpers\Strings::filesizeFormatted($download->size),
             'currentSize' => $download->currentSize,
-            'percent' => $download->percent,
+            'currentSizeText' => \tuefekci\helpers\Strings::filesizeFormatted($download->currentSize),
+            'percent' => $percent,
             'speed' => $download->speed,
+            'speedText' => \tuefekci\helpers\Strings::filesizeFormatted($download->speed),
             'speedLimit' => $download->speedLimit,
             'time' => $download->time,
+            'timeText' => gmdate('H:i:s', (int) round($download->time)),
             'secData' => $download->secData,
             'secDataHistory' => $download->secDataHistory
         );
