@@ -26,6 +26,7 @@ class Download {
 
     // Chunks
     public $chunkSize = 0;
+    public $lastChunkSize = 0;
     public $chunkCount = 0;
     public $chunkCurrent = 0;
     public $chunkDone = 0;
@@ -110,6 +111,23 @@ class Download {
 
             $this->speed = array_sum($this->secDataHistory)/count($this->secDataHistory);
 
+            if($this->chunkCount > 1) {
+                if(count($this->chunkData) == $this->chunkCount) {
+                    $this->currentSize = count($this->chunkData)-1 * $this->chunkSize;
+                    $this->currentSize += $this->lastChunkSize;
+                } else {
+                    $this->currentSize = count($this->chunkData) * $this->chunkSize;
+                }
+                
+            } else {
+                $this->currentSize = $this->lastChunkSize;
+            }
+
+            $this->percent = 0;
+            if(!empty($this->currentSize) && !empty($this->size)) {
+                $this->percent = round(($this->currentSize / $this->size) * 100, 2);
+            }
+
             if(!empty($this->size) && !empty($this->currentSize) && !empty($this->speed)) {
                 $this->time = ($this->size-$this->currentSize)/$this->speed;
             }
@@ -126,7 +144,7 @@ class Download {
     private function initChunks() {
         //============================================================
         // Chunk Settings
-        $this->chunkSize = (int) 32 * 1024 * 1024; // 32MB 
+        $this->chunkSize = (int) 3.2 * 1024 * 1024; // 32MB 
         $this->chunkCount = (int) ceil($this->size / $this->chunkSize);
         $this->chunkCurrent = 0;
         $this->chunkDone = 0;
@@ -141,6 +159,8 @@ class Download {
 
             if($i == $this->chunkCount-1) {
                 $end = $this->size;
+
+                $this->lastChunkSize = $end-$start;
             }
 
             $this->chunks[($i+1)] = ['id' => ($i+1), 'start'=>$start , 'end'=>$end, 'path' => $this->path."/".$i.".chunk"];
@@ -269,6 +289,7 @@ class Download {
                     $this->app->logger->log("WARNING", "[DownloadClient] chunkErrors found, retrying.");
 
                     foreach($_this->chunkErrors as $chunk) {
+                        $this->chunkError--;
                         $_this->chunks[$chunk['id']] = $chunk;
                     }
                 }
@@ -341,6 +362,8 @@ class Download {
                             if ($error) {
                                 $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
                                 $deferred->fail($error);
+                                yield $file->close();
+                                return;
                             } else {
         
                                 $headers = $response->getHeaders();
@@ -352,7 +375,7 @@ class Download {
                                 while (null !== $chunk = yield $body->read()) {
                                     yield $file->write($chunk);
         
-                                    $this->currentSize += strlen($chunk);
+                                    //$this->currentSize += strlen($chunk);
                                     $currentSize += strlen($chunk);
                                     $this->secData += strlen($chunk);
         
@@ -406,6 +429,7 @@ class Download {
                     } catch (\Throwable $error) {
                         $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
                         $deferred->fail($error);   
+                        yield $file->close();
                         return;
                     }
 
@@ -416,7 +440,8 @@ class Download {
                             yield $file->write($data);
                         } catch (\Throwable $error) {
                             $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
-                            $deferred->fail($error);   
+                            $deferred->fail($error);  
+                            yield $file->close(); 
                             return;
                         }
 

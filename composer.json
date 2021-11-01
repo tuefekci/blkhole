@@ -27,7 +27,7 @@
         "type": "path",
         "url": "./../helpers",
         "options": {
-            "symlink": true
+            "symlink": false
         }
     }],
     "require": {
@@ -42,7 +42,8 @@
         "wa72/simplelogger": "^1.1",
         "amphp/parallel-functions": "^1.0",
         "amphp/serialization": "^1.0",
-        "tuefekci/helpers" : "dev-main"
+        "tuefekci/helpers" : "dev-main",
+        "vlucas/phpdotenv": "^5.3"
     },
     "require-dev": {
         "phpunit/phpunit": "^6.0",

@@ -284,6 +284,11 @@ class App extends React.Component {
     this.addMagnet(event.target.value);
   }
 
+  handleDDLChange(event) {
+    this.setState({ddl: event.target.value});
+    //this.addMagnet(event.target.value);
+  }
+
   addMagnet(value) {
     console.log(value);
 
@@ -334,6 +339,18 @@ class App extends React.Component {
                   <Form>
                     <Form.Group className="" controlId="formMagnet">
                       <Form.Control type="magnet" value={this.state.magnet} onChange={this.handleMagnetChange} placeholder="magnet:xt=urn:btih:xxx" />
+                    </Form.Group>
+                  </Form>
+                </Card.Body>
+              </Card>
+            </Col>
+            <Col>
+              <Card className="text bg-warning">
+                <Card.Header>Add DDL</Card.Header>
+                <Card.Body className="pb-0">
+                  <Form>
+                    <Form.Group className="" controlId="formMagnet">
+                      <Form.Control type="ddl" value={this.state.ddl} onChange={this.handleDDLChange} placeholder="https://" />
                     </Form.Group>
                   </Form>
                 </Card.Body>

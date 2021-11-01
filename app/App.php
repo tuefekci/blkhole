@@ -37,16 +37,14 @@ class App {
             \tuefekci\helpers\Store::load(__CONF__.'/store.blk');
         }
 
-        // If running docker load env.
-        if(\tuefekci\helpers\System::isDocker()) {
-        
-            // convert environment variables to constants
-            foreach ($_ENV as $key => $value) {
-                if(!\tuefekci\helpers\Store::has($key)) {
-                    \tuefekci\helpers\Store::set($key, $value);
-                }
-            }
+        $dotenv = \Dotenv\Dotenv::createImmutable(__ROOT__);
+        $dotenv->safeLoad();
 
+        // convert environment variables to constants
+        foreach ($_ENV as $key => $value) {
+            if(!\tuefekci\helpers\Store::has($key)) {
+                \tuefekci\helpers\Store::set($key, $value);
+            }
         }
 
         // If config.ini exists load it.

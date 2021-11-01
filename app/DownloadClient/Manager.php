@@ -20,8 +20,8 @@ class Manager {
         $app->logger->log("INFO", "loaded->".$this->getNameOfClass());
 
         Loop::repeat($msInterval = 1000, function () {
-            $this->stats();
             $this->cycle();
+            $this->checkCompleted();
         });
 
         Loop::repeat($msInterval = 30000, function () {
@@ -40,6 +40,7 @@ class Manager {
         if(\tuefekci\helpers\Store::has("DOWNLOAD_PARALLEL")) {
             $this->parallel = \tuefekci\helpers\Store::get("DOWNLOAD_PARALLEL");
         } else {
+            $this->parallel = 1;
             $this->app->logger->log("ERROR", "[DownloadClient] No DOWNLOAD_PARALLEL found, please set it in the settings.");
         }
 
@@ -53,56 +54,52 @@ class Manager {
             $this->downloads[$dlData['id']] = new Download($this, $dlData['id'], $dlData['path'], $dlData['url'], $dlData['size']);
         }
 
+    }
+
+    private function checkCompleted() {
         // ===============================================================
         // handle completed downloads
         if(!empty($this->downloads)) {
-            foreach($this->downloads as $id => $download) {
-                if($download->done || !empty($download->error)) {
+            \Amp\asyncCall(function() {
+                foreach($this->downloads as $id => $download) {
 
-                    if($download->done && $download->size !== $download->currentSize) {
-                        $download->error[] = "size mismatch";
-                    }
+                    if($download->done || !empty($download->error)) {
 
-                    if($download->error) {
 
-                        // Download has issues, remove it from the list and add it to the list
-                        if(is_array($download->error)) {
-                            $error = implode("; ", $download->error);
-                        } else {
-                            $error = $download->error;
+                        $fileSize = yield $this->app->filesystem->getSize($download->path);
+
+                        if($download->done && $download->size !== $fileSize) {
+                            $download->error[] = "size mismatch";
                         }
 
-                        $this->app->logger->log("ERROR", "[DownloadClient] Download ".$id." failed: ".$error);
+                        if($download->error) {
 
-                        $this->remove($download->id);
-                        $this->manager->add($download->id, $download->path, $download->url, $download->size);
+                            // Download has issues, remove it from the list and add it to the list
+                            if(is_array($download->error)) {
+                                $error = implode("; ", $download->error);
+                            } else {
+                                $error = $download->error;
+                            }
 
-                    } else {
+                            $this->app->logger->log("ERROR", "[DownloadClient] Download ".$id." failed: ".$error);
 
-                        // Download is done!
-                        $this->remove($download->id);
-                        $this->downloadsDone[$download->id] = $download;
-                        $this->app->logger->log("INFO", "[DownloadClient] Download ".$id." finished.");
+                            $this->remove($download->id);
+                            $this->manager->add($download->id, $download->path, $download->url, $download->size);
+
+                        } else {
+
+                            // Download is done!
+                            $this->remove($download->id);
+                            $this->downloadsDone[$download->id] = $download;
+                            $this->app->logger->log("INFO", "[DownloadClient] Download ".$id." finished.");
+
+                        }
 
                     }
-
-
-
-                    
-
                 }
-            }
+            });
         }
     }
-
-
-
-    public function stats() {
-        //print_r($this->downloads);
-        //echo PHP_EOL;
-    }
-
-
 
     public function info($id) {
 
@@ -113,10 +110,7 @@ class Manager {
         }
 
 
-        $percent = 0;
-        if(!empty($download->currentSize) && !empty($download->size)) {
-            $percent = round(($download->currentSize / $download->size) * 100, 2);
-        }
+
 
         return array(
             'done' => $download->done,
@@ -128,7 +122,7 @@ class Manager {
             'sizeText' => \tuefekci\helpers\Strings::filesizeFormatted($download->size),
             'currentSize' => $download->currentSize,
             'currentSizeText' => \tuefekci\helpers\Strings::filesizeFormatted($download->currentSize),
-            'percent' => $percent,
+            'percent' => $download->percent,
             'speed' => $download->speed,
             'speedText' => \tuefekci\helpers\Strings::filesizeFormatted($download->speed),
             'speedLimit' => $download->speedLimit,

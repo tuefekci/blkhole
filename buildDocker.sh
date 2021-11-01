@@ -1,5 +1,5 @@
 #!/bin/bash
-cd ./web; npm run build
+cd ./web; taskset -c 4-7 npm run build
 cd ./../
-composer update
-docker build -t blkhole .
+taskset -c 4-7 composer update
+taskset -c 4-7 docker build -t blkhole .
