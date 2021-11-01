@@ -59,16 +59,15 @@ class Manager {
         // handle completed downloads
         if(!empty($this->downloads)) {
             foreach($this->downloads as $id => $download) {
-                if($download->done) {
+                if($download->done || !empty($download->error)) {
 
-                    if($download->size !== $download->currentSize) {
+                    if($download->done && $download->size !== $download->currentSize) {
                         $download->error[] = "size mismatch";
                     }
 
-
                     if($download->error) {
 
-                        // Download has issues, remove it from the list and add it to the download list
+                        // Download has issues, remove it from the list and add it to the list
                         if(is_array($download->error)) {
                             $error = implode("; ", $download->error);
                         } else {
@@ -122,14 +121,11 @@ class Manager {
             'dir' => $download->dir,
             'url' => $download->url,
             'size' => $download->size,
-            'sizeText' => $download->sizeText,
             'currentSize' => $download->currentSize,
             'percent' => $download->percent,
             'speed' => $download->speed,
-            'speedText' => $download->speedText,
             'speedLimit' => $download->speedLimit,
             'time' => $download->time,
-            'timeText' => $download->timeText,
             'secData' => $download->secData,
             'secDataHistory' => $download->secDataHistory
         );

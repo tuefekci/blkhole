@@ -153,26 +153,30 @@ class App {
     }
 
     public function createFolder($path) {
+
+        $deferred = new \Amp\Deferred;
         $app = $this;
         $path = $path;
 
         try {
-            $app->filesystem->exists($path)->onResolve(function ($error, $exists) use ($app, $path) {
+            $app->filesystem->exists($path)->onResolve(function ($error, $exists) use ($app, $path, $deferred) {
                 if ($error) {
                     $app->logger->log("ERROR", "createFolder->checkFolder (".$path.")", ['exception' => $error]);
+                    $deferred->fail($error);
                 } else {
     
                     if($exists) {
-    
+                        $deferred->resolve("exists");
                     } else {
 
                         $app->logger->log("DEBUG", "createFolder (".$path.")");
 
-                        $app->filesystem->createDirectoryRecursively($path)->onResolve(function ($error, $value) use ($app, $path) {
+                        $app->filesystem->createDirectoryRecursively($path)->onResolve(function ($error, $value) use ($app, $path, $deferred) {
                             if ($error) {
                                 $app->logger->log("ERROR", "createFolder->createFolder (".$path.")", ['exception' => $error]);
+                                $deferred->fail($error);
                             } else {
-    
+                                $deferred->resolve("created");
                             }
                         });
                     }
@@ -184,6 +188,8 @@ class App {
             //throw $th;
             $app->logger->log("ERROR", "createFolder->createFolderCatch (".$path.")", ['exception' => $error]);
         }
+
+        return $deferred->promise();
 
     }
 

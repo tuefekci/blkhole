@@ -4,6 +4,7 @@ namespace tuefekci\blk\DownloadClient;
 
 class Download {
 
+    public $ready = false;
     public $done = false;
     public $paused = false;
     public $error = false;
@@ -12,6 +13,7 @@ class Download {
     public $dir = false;
     public $url = false;
     public $size = 0;
+    public $providerSize = 0;
     public $currentSize = 0;
     public $percent = 0;
     public $speed = 0;
@@ -19,6 +21,8 @@ class Download {
     public $time;
     public $secData = 0;
     public $secDataHistory = [];
+
+    public $connections = 1;
 
     // Chunks
     public $chunkSize = 0;
@@ -32,8 +36,9 @@ class Download {
     private $app;
     private \Amp\Http\Client\HttpClient $client;
 
-    public function __construct($manager, $id, $path, $url, $size=false) {
+    public function __construct($manager, $id, $path, $url, $providerSize=false) {
 
+        $_this = $this;
         $this->client = \Amp\Http\Client\HttpClientBuilder::buildDefault();
 
         $this->app = $manager->app;
@@ -47,37 +52,46 @@ class Download {
         $this->dir = dirname($path);
         $this->url = $url;
 
-        if($size) {
-            $this->size = $size;
+        if($providerSize) {
+            $this->providerSize = $providerSize;
         }
 
-        $this->speedLimit();
+        if(\tuefekci\helpers\Store::has("DOWNLOAD_CONNECTIONS")) {
+            $this->connections = \tuefekci\helpers\Store::get("DOWNLOAD_CONNECTIONS");
+        } else {
+            $this->app->logger->log("ERROR", "[DownloadClient] No DOWNLOAD_CONNECTIONS found, please set it in the settings.");
+        }
 
-        $app->filesystem->exists($this->dir)->onResolve(function ($error, $exists) use ($app) {
-            if ($error) {
-                $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
-            } else {
-
-                if($exists) {
-                    $this->download();
-                } else {
-                    $app->filesystem->createDirectoryRecursively($this->dir)->onResolve(function ($error, $value) use ($app) {
-                        if ($error) {
-                            $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
-                        } else {
-                            $this->download();
-                        }
-                    });
-                }
-
+        $app->createFolder($this->dir)->onResolve(function ($error, $exists) use ($app, $_this) {
+            if($error) {
+                $app->logger->log("ERROR", "[DownloadClient] Error creating folder ".$this->dir);
+                $this->error[] = "Error creating folder";
+                return;
             }
 
+            $this->getHeaders()->onResolve(function ($error, $headers) use ($app, $_this) {
+                if($error) {            
+                    $app->logger->log("ERROR", "[DownloadClient] Error getting headers ".$this->url);
+                    $this->error[] = "Error getting headers";
+                    return;
+                }
+
+                // We have all the needed data lets start.
+                $this->initChunks();
+                $this->ready = true;
+                $this->download();
+            });
         });
 
         
         \Amp\Loop::repeat($msInterval = 10000, function ($watcherId) use ($app) {
 
-            $app->logger->log("DEBUG", "[DownloadClient] ".$this->percent."% / speed: ".$this->speed." / tta: ".$this->time , "download->".$this->path);
+            if(!$this->ready) {
+                $app->logger->log("DEBUG", "[DownloadClient] not yet ready ".$this->path);
+                return;
+            }
+
+            $app->logger->log("DEBUG", "[DownloadClient] ".$this->percent."% / speed: ".$this->speed." / tta: ".$this->time ." / ". "download->".$this->path);
 
             if($this->done) {
                 \Amp\Loop::cancel($watcherId);
@@ -86,6 +100,11 @@ class Download {
         });
 
         \Amp\Loop::repeat($msInterval = 1000, function ($watcherId) use ($app) {
+
+            if(!$this->ready) {
+                $app->logger->log("DEBUG", "[DownloadClient] not yet ready ".$this->path);
+                return;
+            }
 
             $this->speedLimit();
  
@@ -112,8 +131,8 @@ class Download {
     private function initChunks() {
         //============================================================
         // Chunk Settings
-        $this->chunkSize = 32 * 1024 * 1024; // 32MB 
-        $this->chunkCount = ceil($this->size / $this->chunkSize);
+        $this->chunkSize = (int) 32 * 1024 * 1024; // 32MB 
+        $this->chunkCount = (int) ceil($this->size / $this->chunkSize);
         $this->chunkCurrent = 0;
         $this->chunkDone = 0;
         $this->chunkError = 0;
@@ -141,39 +160,41 @@ class Download {
      * 
      * gets the headers for the requested download so we can determine how many chunks etc.
      * 
-     * @return void
      */
     public function getHeaders() {
 
-        $this->app->info("getHeaders", "Download");
+        $deferred = new \Amp\Deferred;
+
+        $this->app->logger->log("DEBUG", "[DownloadClient] getHeaders ".$this->path);
 
         $app = $this->app;
 
-        $req = new \Amp\Http\Client\Request($this->url);
-        $req->setHeader('Range', 'bytes=0-1');
+        $request = new \Amp\Http\Client\Request($this->url);
+        $request->setMethod("HEAD");
 
-        $client = new \Amp\Http\Client\HttpClient;
-        $client->request($req)->onResolve(function ($error, $response) use ($app) {
+        $this->client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
 
             if($error) {
                 $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
-                $this->error[] = "download->getHeaders";
-                return;
-            }
+                $this->error[] = "getHeaders failed";
+                $deferred->fail($error);
+            } else {
 
-            if($response->getStatus() == 206) {
                 $headers = $response->getHeaders();
 
-                $this->size = $headers['content-length'][0];
-                $this->sizeText = $app->filesize_formatted($this->size);
-                $this->speedLimit();
-            } else {
-                $this->size = $response->getHeaders()['content-length'][0];
-                $this->sizeText = $app->filesize_formatted($this->size);
-                $this->speedLimit();
+                if(empty($headers['content-length'][0])) {
+                    $deferred->fail(new \Throwable("Download getHeaders content-lenth empty."));
+                } else {
+                    $this->size = (int) $headers['content-length'][0];
+                    $deferred->resolve($this->size);
+                }
+
             }
 
+
         });
+
+        return $deferred->promise();
 
 
     }
@@ -188,6 +209,95 @@ class Download {
      */
     private function download() {
 
+
+        $app = $this->app;
+        $_this = $this;
+
+        $chunks = array();
+        for ($i=0; $i < $this->chunkCount+20; $i++) { 
+
+            $start = $i * $this->chunkSize;
+            $end = ($i+1)*$this->chunkSize;
+
+            if($i == $this->chunkCount-1) {
+                $end = $this->size;
+            }
+
+            $chunks[] = (object) ['id' => ($i+1), 'start'=>$start , 'end'=>$end, $path = $this->path."/".$i];
+
+        }
+
+        $chunkedChunks = array_chunk($chunks, $this->connections);
+
+
+        var_dump(\tuefekci\helpers\Strings::filesizeFormatted($this->size));
+        var_dump(\tuefekci\helpers\Strings::filesizeFormatted($this->chunkSize));
+        var_dump($this->chunkCount);
+        var_dump(count($chunks));
+        var_dump(count($chunkedChunks));
+
+
+        foreach($chunkedChunks as $key => $chunkedChunk) {
+
+            $urls = [
+                'https://secure.php.net',
+                'https://amphp.org',
+                'https://github.com',			
+            ];
+    
+            $promises = [];
+            foreach ($urls as $url) {
+                $promises[$url] = \Amp\call(function() use ($url) {
+                    $deferred = new \Amp\Deferred();
+    
+                    \Amp\Loop::delay(3 * 1000, function () use ($url, $deferred) {
+                        $deferred->resolve($url);
+                    });
+    
+                    return $deferred->promise();
+                });
+            }
+    
+            $responses = yield \Amp\Promise\all($promises);
+    
+            foreach ($responses as $url => $response) {
+                \printf("Read %d bytes from %s\n", \strlen($response), $url);
+            }
+
+            /*
+            $promises = array();
+
+            foreach($chunkedChunk as $chunk) {
+                $promises[] = $this->testChunk($chunk);
+            }
+
+
+            $app->logger->log("DEBUG", $this->path.": chunkedChunk ".$key);
+            $results = yield \Amp\Promise\all($promises);
+            $app->logger->log("DEBUG", $this->path.": chunkedChunk ".$key, $results);
+            */
+
+        }
+
+
+        /*
+        $tmpSize = 0;
+        foreach($chunks as $chunk) {
+            $tmpSize += $chunk->end - $chunk->start;
+        }
+
+        var_dump(\tuefekci\helpers\Strings::filesizeFormatted($this->size));
+        var_dump(\tuefekci\helpers\Strings::filesizeFormatted($tmpSize));
+        var_dump(\tuefekci\helpers\Strings::filesizeFormatted($this->chunkSize));
+        var_dump($this->chunkCount);
+        var_dump(count($chunks));
+        var_dump(count($chunkedChunks));
+        var_dump($chunkedChunks[0]);
+        */
+
+    }
+
+    private function downloadChunk() {
 
         $app = $this->app;
 
