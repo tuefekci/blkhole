@@ -22,10 +22,12 @@ class ProviderInterface {
 
     public function status($id=null) {
 
-        if($id) {
+        if($id && !empty($this->status[$id])) {
             return $this->status[$id];
-        } else {
+        } elseif (empty($id)) {
             return $this->status;
+        } else {
+            return false;
         }
         
     }

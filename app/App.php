@@ -211,11 +211,10 @@ class App {
                     }
                 }
 
-
                 if(!in_array(false, $check, true)) {
                     // remove magnet and complete downloads etc.
 
-                    yield $this->filesystem->deleteFile($path);
+                    $this->filesystem->deleteFile($path);
                     unset($this->magnets[$path]);
 
                     // remove downloads
@@ -367,11 +366,39 @@ class App {
         
     }
 
-    function filesize_formatted($size)
-    {
-        $units = array( 'B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB');
-        $power = $size > 0 ? floor(log($size, 1024)) : 0;
-        return number_format($size / pow(1024, $power), 2, '.', ',') . ' ' . $units[$power];
+    public function addMagnet($magnetUrl) {
+        if (\strpos($magnetUrl, 'magnet:') !== false) {
+
+            $magnetRaw = $magnetUrl;
+
+            if(preg_match('~%[0-9A-F]{2}~i', $magnetRaw)) {
+                $magnetRaw = urldecode($magnetRaw);
+            }
+
+            preg_match('#magnet:\?xt=urn:btih:(?<hash>.*?)&dn=(?<filename>.*?)&tr=(?<trackers>.*?)$#', $magnetRaw, $magnet);
+
+            if(!empty($magnet['filename']) && is_string($magnet['filename'])) {
+
+                $app = $this;
+
+                $this->filesystem->exists(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $exists) use ($app, $magnet, $magnetRaw) {
+                    if ($error) {
+                        $app->logger->log("ERROR", "addMagnet->exists ".$error->getMessage(), ['exception' => $error]);
+                    } else {
+                        if($exists) {
+                            $app->filesystem->write(__BLACKHOLE__."/webinterface/".$magnet['filename'].".magnet", $magnetRaw);
+                        }
+                    }
+        
+                });
+
+            } else {
+                return false;
+            }
+
+        } else {
+            return false;
+        }
     }
 
 }

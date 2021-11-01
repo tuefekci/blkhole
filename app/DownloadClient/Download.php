@@ -154,7 +154,7 @@ class Download {
         if(\tuefekci\helpers\Store::has("DOWNLOAD_BANDWIDTH")) {
             $bandwidth = \tuefekci\helpers\Store::get("DOWNLOAD_BANDWIDTH");
         } else {
-            $this->app->logger->log("ERROR", "[DownloadClient] No DOWNLOAD_PARALLEL found, please set it in the settings.");
+            $this->app->logger->log("ERROR", "[DownloadClient] No DOWNLOAD_BANDWIDTH found, please set it in the settings.");
         }
 
 

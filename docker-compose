@@ -8,6 +8,10 @@ services:
       - PGID=0
       - TZ=Europe/Berlin
       - MEMORY_LIMIT=1024M
+      - ALLDEBRID_APIKEY=apiShowcaseStaticApikey
+      - DOWNLOAD_CONNECTIONS=3
+      - DOWNLOAD_BANDWIDTH=3072
+      - DOWNLOAD_PARALLEL=3
     volumes:
       - /srv/blkhole:/srv/blkhole/data
       - /srv/blkhole/downloads:/srv/blkhole/data/downloads
