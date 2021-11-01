@@ -137,7 +137,7 @@ class Download {
         for ($i=0; $i < $this->chunkCount; $i++) { 
 
             $start = $i * $this->chunkSize;
-            $end = ($i+1)*$this->chunkSize;
+            $end = (($i+1)*$this->chunkSize)-1;
 
             if($i == $this->chunkCount-1) {
                 $end = $this->size;
@@ -281,8 +281,16 @@ class Download {
 
                 // All chunks are done
                 $this->app->logger->log("DEBUG", "[DownloadClient] chunks done");
-                $this->finalizeDownload();
-                $this->app->logger->log("DEBUG", "[DownloadClient] download done");
+                $this->finalizeDownload()->onResolve(function ($error, $value) use ($app) {
+                    if($error) {
+                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload failed ".$error->getMessage(), ['exception'=>$error]);
+                        $this->download();
+                    } else {
+                        $this->done = true;
+                        $app->logger->log("DEBUG", "[DownloadClient] download done: ".$value);
+                    }
+                });
+                
 
             }
 
@@ -387,63 +395,55 @@ class Download {
 
         $this->app->logger->log("DEBUG", "[DownloadClient] Finalizing download");
 
-        $app->createFolder($this->dir)->onResolve(function ($error, $exists) use ($app, $deferred) {
-            if($error) {
-                $app->logger->log("ERROR", "[DownloadClient] finalizeDownload Error creating folder ".$this->dir);
-                $this->error[] = "Error creating folder";
-                $deferred->fail($error);
-                return;
-            }
+            $app->filesystem->touch($this->path)->onResolve(function ($error, $value) use ($app, $deferred) {
+                if ($error) {
+                    $app->logger->log("ERROR", "[DownloadClient] finalizeDownload touch ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                    $deferred->fail($error);
+                } else {
 
-            if($exists){
-
-                $app->filesystem->touch($this->path)->onResolve(function ($error, $value) use ($app, $deferred) {
-                    if ($error) {
-                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload touch ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
-                        $deferred->fail($error);
-                    } else {
-
+                    try {
                         $file = yield \Amp\File\openFile($this->path, "w");
+                    } catch (\Throwable $error) {
+                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                        $deferred->fail($error);   
+                        return;
+                    }
 
-                        foreach($this->chunkData as $chunk) {
+                    foreach($this->chunkData as $chunk) {
 
-                            try {
-                                $data = yield $app->filesystem->read($chunk['path']);
-                                yield $file->write($data);
-                            } catch (\Throwable $error) {
-                                $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
-                                $deferred->fail($error);   
-                                break;
-                            }
-
-                        }
-
-                        yield $file->close();
-
-
-
-                        $fileSize = yield $app->filesystem->getSize($this->path);
-
-                        if($fileSize != $this->size) {
-
-                            yield $app->filesystem->deleteFile($this->path);
-                            $this->done = false;
-                            $deferred->fail(new \Exception("Download finalize failed. Size mismatch."));
-
-                        } else {
-
-                            // Remove chunks
-
-                            $this->done = true;
-                            $app->logger->log("DEBUG", "[DownloadClient] Download finalize completed ".$this->path);
-                            $deferred->resolve($this->path);
+                        try {
+                            $data = yield $app->filesystem->read($chunk['path']);
+                            yield $file->write($data);
+                        } catch (\Throwable $error) {
+                            $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                            $deferred->fail($error);   
+                            return;
                         }
 
                     }
 
-                });
+                    yield $file->close();
 
-            }
+
+
+                    $fileSize = yield $app->filesystem->getSize($this->path);
+
+                    if($fileSize != $this->size) {
+
+                        yield $app->filesystem->deleteFile($this->path);
+                        $this->done = false;
+                        $deferred->fail(new \Exception("Download finalize failed. Size mismatch."));
+
+                    } else {
+
+                        // Remove chunks
+
+                        $this->done = true;
+                        $app->logger->log("DEBUG", "[DownloadClient] Download finalize completed ".$this->path);
+                        $deferred->resolve($this->path);
+                    }
+
+                }
 
         });
 

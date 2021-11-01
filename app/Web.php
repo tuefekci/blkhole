@@ -49,6 +49,11 @@ class Web {
             return $_this->index();
         }));
 
+        $this->router->addRoute('GET', '/test', new CallableRequestHandler(function () {
+            die("RESTART");
+            return new Response(Status::OK, ['content-type' => 'text/plain'], 'Hello, world!'.time());
+        }));
+
         $this->router->addRoute('GET', '/restart', new CallableRequestHandler(function () {
             die("RESTART");
             return new Response(Status::OK, ['content-type' => 'text/plain'], 'Hello, world!'.time());
@@ -80,10 +85,9 @@ class Web {
 
                             $app->filesystem->exists(__BLACKHOLE__."/webinterface")->onResolve(function ($error, $exists) use ($app, $magnet, $magnetRaw) {
                                 if ($error) {
-                                    $app->error("webinterface->blackhole->checkFolder->doesNotExists??", $error->getMessage());
+                                    $app->logger->log("ERROR", "webinterface->blackhole->checkFolder->doesNotExists?? ".$error->getMessage(), ['exception' => $error]);
                                 } else {
                                     if($exists) {
-
                                         $app->filesystem->write(__BLACKHOLE__."/webinterface/".$magnet['filename'].".magnet", $magnetRaw);
                                     }
                                 }

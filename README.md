@@ -17,6 +17,13 @@ Be aware config and env vars will only be used if the var is not initialized in 
 
 blkhole has no security options because it is intended to be run in your local network. If you want to use it in a public network you need to setup your own security, for example reverse nginx with password protection.
 
+#### Settings
+parallel=3 # Number of parallel downloads
+connections=3 # Number of connections per download
+bandwidth=3072 # Max bandwidth in B/s
+chunkSize=32 # Chunk size in MB (faster connection should have bigger chunk size slower smaller this is specific to your network mostly)
+
+
 #### Standalone PHP > 7.4 (older versions might work but i am not testing them)
 - Edit config_example.ini add your alldebrid api key etc. and rename to config.ini.
 - run composer update

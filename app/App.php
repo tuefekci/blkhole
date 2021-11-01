@@ -215,12 +215,12 @@ class App {
                 if(!in_array(false, $check, true)) {
                     // remove magnet and complete downloads etc.
 
-                    $this->filesystem->deleteFile($path);
+                    yield $this->filesystem->deleteFile($path);
                     unset($this->magnets[$path]);
 
                     // remove downloads
                     foreach($magnet['downloads'] as $dlId) {
-                        $download = $this->downloadClient->remove($dlId);
+                        $this->downloadClient->remove($dlId);
                     }
 
                     // remove from provider

@@ -24,10 +24,8 @@ class Manager {
             $this->cycle();
         });
 
-        Loop::repeat($msInterval = 10000, function () {
-            if (count($this->downloadQueue) > 0) {
-                $this->app->logger->log("INFO", "DownloadClient ".count($this->downloadQueue)." downloads in queue, ".count($this->downloads)." downloads in progress, ".count($this->downloadsDone)." downloads finished.");
-            }
+        Loop::repeat($msInterval = 30000, function () {
+            $this->app->logger->log("INFO", "DownloadClient ".count($this->downloadQueue)." downloads in queue, ".count($this->downloads)." downloads in progress, ".count($this->downloadsDone)." downloads finished.");
         });
 
     }
@@ -119,7 +117,7 @@ class Manager {
         if(!empty($download->currentSize) && !empty($download->size)) {
             $percent = round(($download->currentSize / $download->size) * 100, 2);
         }
-        
+
         return array(
             'done' => $download->done,
             'id' => $download->id,
