@@ -411,7 +411,15 @@ class Download {
         \Amp\asyncCall(function() use ($app, $_this, $deferred) {
 
             yield new \Amp\Delayed(5000);
-            yield $app->createFolder($this->dir);
+
+            try {
+                yield $app->createFolder($this->dir);
+            } catch (\Throwable $error) {
+                $app->logger->log("ERROR", "[DownloadClient] finalizeDownload createFolder ". $this->dir . ": " . $error->getMessage(), ['exception'=>$error]);
+                $deferred->fail($error);
+                return;
+            }
+
 
             $this->app->logger->log("DEBUG", "[DownloadClient] Finalizing download");
 
@@ -447,35 +455,40 @@ class Download {
                     yield $file->close();
 
 
+                    try {
 
-                    if(yield $app->filesystem->exists($this->path)) {
+                        if(yield $app->filesystem->exists($this->path)) {
 
-                        $fileSize = yield $app->filesystem->getSize($this->path);
+                            $fileSize = yield $app->filesystem->getSize($this->path);
 
-                        if($fileSize != $this->size) {
+                            if($fileSize != $this->size) {
 
-                            yield $app->filesystem->deleteFile($this->path);
-                            $this->done = false;
-                            $deferred->fail(new \Exception("Download finalize failed. Size mismatch."));
+                                yield $app->filesystem->deleteFile($this->path);
+                                $this->done = false;
+                                $deferred->fail(new \Exception("Download finalize failed. Size mismatch."));
 
-                        } else {
+                            } else {
 
-                            // Remove chunks
-                            foreach($this->chunkData as $chunk) {
+                                // Remove chunks
+                                foreach($this->chunkData as $chunk) {
 
-                                try {
-                                    $app->filesystem->deleteFile($chunk['path']);
-                                } catch (\Throwable $error) {
-                                    $app->logger->log("ERROR", "[DownloadClient] finalizeDownload removeChunk ". $chunk['path'] . ": " . $error->getMessage(), ['exception'=>$error]);
+                                    try {
+                                        $app->filesystem->deleteFile($chunk['path']);
+                                    } catch (\Throwable $error) {
+                                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload removeChunk ". $chunk['path'] . ": " . $error->getMessage(), ['exception'=>$error]);
+                                    }
+            
                                 }
-        
-                            }
 
-                            $app->logger->log("DEBUG", "[DownloadClient] Download finalize completed ".$this->path);
-                            $deferred->resolve($this->path);
+                                $app->logger->log("DEBUG", "[DownloadClient] Download finalize completed ".$this->path);
+                                $deferred->resolve($this->path);
+                            }
+                        } else {
+                            $deferred->fail(new \Exception("Download finalize failed. File not found."));
                         }
-                    } else {
-                        $deferred->fail(new \Exception("Download finalize failed. File not found."));
+
+                    } catch (\Throwable $error) {
+                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload end try ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
                     }
 
                 }
