@@ -285,6 +285,7 @@ class Download {
                     foreach($_this->chunkErrors as $chunk) {
                         $this->chunkError--;
                         $_this->chunks[$chunk['id']] = $chunk;
+                        unset($_this->chunkErrors[$chunk['id']]);
                     }
                 }
 
