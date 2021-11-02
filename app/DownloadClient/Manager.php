@@ -65,11 +65,12 @@ class Manager {
 
                     if($download->done || !empty($download->error)) {
 
+                        if($download->done && yield $this->app->filesystem->exists($download->path)) {
+                            $fileSize = yield $this->app->filesystem->getSize($download->path);
 
-                        $fileSize = yield $this->app->filesystem->getSize($download->path);
-
-                        if($download->done && $download->size !== $fileSize) {
-                            $download->error[] = "size mismatch";
+                            if($download->size !== $fileSize) {
+                                $download->error[] = "size mismatch";
+                            }
                         }
 
                         if($download->error) {
@@ -84,7 +85,7 @@ class Manager {
                             $this->app->logger->log("ERROR", "[DownloadClient] Download ".$id." failed: ".$error);
 
                             $this->remove($download->id);
-                            $this->manager->add($download->id, $download->path, $download->url, $download->size);
+                            $this->add($download->id, $download->path, $download->url, $download->size);
 
                         } else {
 
