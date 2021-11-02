@@ -79,7 +79,7 @@ class App {
 
         }
 
-        //\tuefekci\helpers\Store::save(__CONF__.'/store.blk');
+        \tuefekci\helpers\Store::save(__CONF__.'/store.blk');
 
         // =================================================================
 
@@ -164,12 +164,21 @@ class App {
                 } else {
     
                     if($exists) {
-                        $deferred->resolve("exists");
+
+                        $app->filesystem->changePermissions($path, 0777)->onResolve(function ($error, $value) use ($app, $path, $deferred) {
+                            if ($error) {
+                                $app->logger->log("ERROR", "createFolder->changePermissions (".$path.")", ['exception' => $error]);
+                                $deferred->fail($error);
+                            } else {
+                                $deferred->resolve("exists");
+                            }
+                        });
+
                     } else {
 
                         $app->logger->log("DEBUG", "createFolder (".$path.")");
 
-                        $app->filesystem->createDirectoryRecursively($path)->onResolve(function ($error, $value) use ($app, $path, $deferred) {
+                        $app->filesystem->createDirectoryRecursively($path, 0777)->onResolve(function ($error, $value) use ($app, $path, $deferred) {
                             if ($error) {
                                 $app->logger->log("ERROR", "createFolder->createFolder (".$path.")", ['exception' => $error]);
                                 $deferred->fail($error);

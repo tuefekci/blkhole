@@ -76,7 +76,7 @@ class Alldebrid extends ProviderInterface {
                 $data = yield $response->getBody()->buffer();
                 $data = json_decode($data);
 
-                if($data->status == "success") {
+                if($data && $data->status == "success") {
                     $app->logger->log("INFO", "[Alldebrid] getDownload->(".$link.")", ['status'=>$data->status, 'exception'=>$error]);
 
                     if(isset($data->data->delayed)) {
