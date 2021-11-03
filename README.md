@@ -17,6 +17,20 @@ Be aware config and env vars will only be used if the var is not initialized in 
 
 blkhole has no security options because it is intended to be run in your local network. If you want to use it in a public network you need to setup your own security, for example reverse nginx with password protection.
 
+### Features
+- Magnet links
+- DDL links (based on available DDL services by provider)
+- Torrents
+- Chunked Downloads
+- Resumable Downloads
+- Bandwidth Limitation 
+- Connection Limitation 
+- Automatic cleanup of finished downloads (additional to the cleanup of finished tasks in the cloud)
+- Automatic cleanup of failed downloads (additional to the cleanup of failed tasks in the cloud)
+- Automatic cleanup of old files (files which are not active downloads will be removed after 24 hours)
+
+---
+
 ## Settings
 
 #### download
@@ -25,16 +39,15 @@ blkhole has no security options because it is intended to be run in your local n
 - bandwidth=3072 # Max bandwidth in B/s
 - chunkSize=3200 # Chunk size in B (faster connection should have bigger chunk size slower smaller this is specific to your network mostly)
 
-
-### Standalone PHP > 7.4 (older versions might work but i am not testing them)
-- Edit config_example.ini add your alldebrid api key etc. and rename to config.ini.
-- run composer update
-- run php main.php
-
 ### Docker
 - Have a look at Docker-Compose file and edit it to your preferences.
 - Everything in the Config.ini can also be used in the ENV Vars Section just combine header with the key all in uppercase for example: ALLDEBRID_APIKEY or WEBINTERFACE_PORT
 - run docker-compose with your compose file or import to Portainer etc.
+
+### Standalone PHP > 7.4 (older versions might work but i am not testing them)
+- Copy data/config/config_example.ini add your alldebrid api key etc. and rename to config.ini.
+- run composer update
+- run php main.php
 
 ----
 

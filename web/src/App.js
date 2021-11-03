@@ -135,9 +135,18 @@ class Item extends React.Component {
                             let download = data.downloads[key2];
 
                             let status = <FaDownload />;
+                            let content = (
+                              <Row>
+                                <Col xs="3" className="pt-2"><ProgressBar className="bg-dark" variant="danger" now={download.percent} label={`${download.percent}%`} /></Col>
+                                <Col xs="3"><FaDatabase /> {download.sizeText}</Col>
+                                <Col xs="3"><FaTachometerAlt /> {download.speedText}</Col>
+                                <Col xs="3"><FaClock /> {download.timeText}</Col>
+                              </Row>
+                            );
 
                             if(download.done) {
                               status = <FaCheckCircle />;
+                              content = null;
                             }
 
                             if(download) {
@@ -145,12 +154,7 @@ class Item extends React.Component {
                                 <Row>
                                   <Col xs="6">{status} {Helpers.basename(download.path)}</Col>
                                   <Col xs="6">
-                                    <Row>
-                                      <Col xs="3" className="pt-2"><ProgressBar className="bg-dark" variant="danger" now={download.percent} label={`${download.percent}%`} /></Col>
-                                      <Col xs="3"><FaDatabase /> {download.sizeText}</Col>
-                                      <Col xs="3"><FaTachometerAlt /> {download.speedText}</Col>
-                                      <Col xs="3"><FaClock /> {download.timeText}</Col>
-                                    </Row>
+                                    {content}
                                   </Col>
                                 </Row>
 

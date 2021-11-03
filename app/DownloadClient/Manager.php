@@ -35,6 +35,15 @@ class Manager {
        return static::class;
     }
 
+    public function isIdle() {
+        $count = 0;
+        $count += count($this->downloads);
+        $count += count($this->downloadQueue);
+        $count += count($this->downloadsDone);
+
+        return $count > 0 ? false : true;
+    }
+
     public function cycle() {
 
         if(\tuefekci\helpers\Store::has("DOWNLOAD_PARALLEL")) {

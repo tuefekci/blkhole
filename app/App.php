@@ -21,15 +21,6 @@ class App {
         $app = $this;
 
         // =================================================================
-        // Init Utilities
-        $this->filesystem = filesystem();
-        $this->logger = new \tuefekci\helpers\Logger();
-
-        // =================================================================
-        // Create needed folders for the Application
-        $this->createFolders();
-
-        // =================================================================
         // Check every possible config option and set it to the store.
 
         // If store exists load it.
@@ -79,9 +70,20 @@ class App {
 
         }
 
-        \tuefekci\helpers\Store::save(__CONF__.'/store.blk');
+        //\tuefekci\helpers\Store::save(__CONF__.'/store.blk');
 
         // =================================================================
+
+        // =================================================================
+        // Init Utilities
+        $this->filesystem = filesystem();
+        $this->logger = new \tuefekci\helpers\Logger();
+
+        // =================================================================
+        // Create needed folders for the Application
+        $this->createFolders();
+
+
 
         return $this;
 
@@ -119,6 +121,15 @@ class App {
             $this->checkDownload();
         });
 
+        // Clean Up Loop
+        \Amp\Loop::repeat($msInterval = 30000, function () {
+
+            if($this->downloadClient->isIdle()) {
+                $this->logger->info("DownloadClient is idle, lets clean up.");
+            }
+
+        });
+
         /*
         Loop::repeat($msInterval = 3000, function () {
             echo "test3".PHP_EOL;
@@ -134,6 +145,43 @@ class App {
 
 
         // =================================================================
+    }
+
+
+    public function cleanUp() {
+
+        $app = $this;
+
+        $this->logger->log("INFO", "Cleaning up...");
+
+        $this->logger->info("INFO", "Deleting all files in ".__TMP__);
+        $this->filesystem->listFiles(__TMP__)->onResolve(function ($error, $files) use ($app) {
+            if ($error) {
+                $this->logger->log("ERROR", "cleanUp listFiles", ['exception' => $error]);
+            } else {
+
+                foreach ($files as $file) {
+
+                    try {
+                        if(yield $this->filesystem->isDirectory($file)) {
+                            $this->logger->info("INFO", "Deleting directory ".$file);
+                            yield $this->filesystem->deleteDirectory($file);
+                        } elseif(yield $this->filesystem->isFile($file)) {
+                            $this->logger->info("INFO", "Deleting file ".$file);
+                            yield $this->filesystem->deleteFile($file);
+                        } else {
+                            $app->logger->log("WARNING", "[CleanUp] Path is not Dir or File: ".$file);
+                        }
+                    } catch (\Throwable $error) {
+                        $app->logger->log("ERROR", "cleanUp->tmp (".$file.")", ['exception' => $error]);
+                    }
+
+                }
+
+            }
+
+        });
+
     }
 
     // Create needed folders for the Application
@@ -297,27 +345,31 @@ class App {
 
         $_this = $this;
 
-        foreach($this->magnets as $path => $magnet) {
-            if(empty($magnet['provider'])) {
+        \Amp\asyncCall(function() use ($_this) {
 
-                $this->filesystem->read($path)->onResolve(function ($error, $magnet) use ($_this, $path) {
-                    if ($error) {
-                        $_this->logger->log("ERROR", "handleMagnets->read", ['exception' => $error]);
-                    } else {
+            foreach($this->magnets as $path => $magnet) {
+                if(empty($magnet['provider']) && yield $_this->filesystem->exists($path)) {
 
-                        $this->provider->addMagnet($magnet)->onResolve(function ($error, $data) use ($_this, $path) {
-                            if ($error) {
-                                $_this->logger->log("ERROR", "handleMagnets->addMagnet", ['exception' => $error]);
-                            } else {
-                                $_this->magnets[$path]['provider'] = $data;
-                            }
-                        });
+                    $this->filesystem->read($path)->onResolve(function ($error, $magnet) use ($_this, $path) {
+                        if ($error) {
+                            $_this->logger->log("ERROR", "handleMagnets->read", ['exception' => $error]);
+                        } else {
 
-                    }
-                });
+                            $this->provider->addMagnet($magnet)->onResolve(function ($error, $data) use ($_this, $path) {
+                                if ($error) {
+                                    $_this->logger->log("ERROR", "handleMagnets->addMagnet", ['exception' => $error]);
+                                } else {
+                                    $_this->magnets[$path]['provider'] = $data;
+                                }
+                            });
 
+                        }
+                    });
+
+                }
             }
-        }
+
+        });
 
 
     }
@@ -348,6 +400,10 @@ class App {
                                     $pathInfo = pathinfo($filePath);
 
                                     if($pathInfo['extension'] == "magnet") {
+
+                                        if(count($this->magnets) > 20) {
+                                            continue;
+                                        }
 
                                         if(!isset($this->magnets[$filePath])) {
                                             $this->magnets[$filePath] = $pathInfo;

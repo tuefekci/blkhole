@@ -6,6 +6,7 @@ class Download {
 
     public $ready = false;
     public $done = false;
+    public $finished = false;
     public $paused = false;
     public $error = false;
     public $id = false;
@@ -28,8 +29,6 @@ class Download {
     public $chunkSize = 0;
     public $lastChunkSize = 0;
     public $chunkCount = 0;
-    public $chunkCurrent = 0;
-    public $chunkDone = 0;
 
     private $chunks = [];
     private $chunkData = [];
@@ -48,7 +47,6 @@ class Download {
         $this->manager = $manager;
 
         $app = $manager->app;
-        $app->logger->log("INFO", "[DownloadClient] Download added ".$url);
 
         $this->id = $id;
         $this->path = $path;
@@ -58,6 +56,12 @@ class Download {
         if($providerSize) {
             $this->providerSize = $providerSize;
         }
+
+        // ================================================================
+
+
+        $app->logger->log("INFO", "[DownloadClient] Download added ".$id." <-> ".$url);
+
 
         if(\tuefekci\helpers\Store::has("DOWNLOAD_CONNECTIONS")) {
             $this->connections = \tuefekci\helpers\Store::get("DOWNLOAD_CONNECTIONS");
@@ -77,6 +81,25 @@ class Download {
                     $app->logger->log("ERROR", "[DownloadClient] Error getting headers ".$this->url);
                     $this->error[] = "Error getting headers";
                     return;
+                }
+
+                try {
+                    if(yield $app->filesystem->exists($this->path)) {
+                        $app->logger->log("INFO", "[DownloadClient] File already exists ".$this->path);
+                        $size = yield $app->filesystem->getSize($this->path);
+    
+                        if($size == $this->size) {
+                            $app->logger->log("NOTICE", "[DownloadClient] File already exists and is the same size ".$this->path);
+                            $this->ready = true;
+                            $this->done = true;
+                            return;
+                        } else {
+                            $app->logger->log("WARNING", "[DownloadClient] File already exists but is not the same size ".$this->path);
+                        }
+    
+                    }
+                } catch (\Throwable $error) {
+                    $app->logger->log("ERROR", "[DownloadClient] Error File exists check: ".$this->dir. " ".$error->getMessage(), ['exception'=>$error]);
                 }
 
                 // We have all the needed data lets start.
@@ -135,14 +158,15 @@ class Download {
         return $this;
     }
 
+    public function isDownloading() {
+        return !$this->finished;
+    }
+
     private function initChunks() {
         //============================================================
         // Chunk Settings
-        $this->chunkSize = (int) 3.2 * 1024 * 1024; // 32MB 
+        $this->chunkSize = (int) 32 * 1024 * 1024; // 32MB 
         $this->chunkCount = (int) ceil($this->size / $this->chunkSize);
-        $this->chunkCurrent = 0;
-        $this->chunkDone = 0;
-        $this->chunkError = 0;
         //============================================================
 
         $this->chunks = array();
@@ -261,15 +285,13 @@ class Download {
                 foreach($arrayOfErrors as $id => $error) {
                     $this->app->logger->log("WARNING", "[DownloadClient] chunk ".$id." failed ", ['exception'=>$error]);
 
-                    $this->chunkError++;
                     $this->chunkErrors[$id] = $this->chunks[$id];
                     unset($this->chunks[$id]);
                 }
 
                 foreach ($arrayOfValues as $id => $value) {
-                    $this->app->logger->log("DEBUG", "[DownloadClient] chunk ".$id." done");
+                    //$this->app->logger->log("DEBUG", "[DownloadClient] chunk ".$id." done");
 
-                    $this->chunkDone++;
                     $this->chunkData[$id] = $this->chunks[$id];
                     $this->chunkData[$id]['path'] = $value;
                     unset($this->chunks[$id]);
@@ -283,7 +305,6 @@ class Download {
                     $this->app->logger->log("WARNING", "[DownloadClient] chunkErrors found, retrying.");
 
                     foreach($_this->chunkErrors as $chunk) {
-                        $this->chunkError--;
                         $_this->chunks[$chunk['id']] = $chunk;
                         unset($_this->chunkErrors[$chunk['id']]);
                     }
@@ -326,75 +347,116 @@ class Download {
 
         $app = $this->app;
 
-        $app->createFolder($dir)->onResolve(function ($error, $exists) use ($app, $_this, $deferred, $start, $end, $path, $id) {
-            if($error) {
-                $app->logger->log("ERROR", "[DownloadClient] Error creating folder: ".$this->dir. " ".$error->getMessage(), ['exception'=>$error]);
-                $this->error[] = "Error creating folder";
-                $deferred->fail($error);
-                return;
-            } else {
+        \Amp\asyncCall(function() use ($app, $_this, $deferred, $start, $end, $path, $id, $dir) {
 
-                $app->filesystem->touch($path)->onResolve(function ($error, $value) use ($app, $deferred, $start, $end, $path, $id) {
-                    if ($error) {
-                        $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
-                        $deferred->fail($error);
+
+            // =============================================================
+            // Check if chunk is already existing and has the correct size.
+            try {
+                if(yield $app->filesystem->exists($path)) {
+
+                    $size = yield $app->filesystem->getSize($path);
+
+                    if((int) $size == (int) $this->chunkSize) {
+                        $app->logger->log("DEBUG", "[DownloadClient] Chunk already exists and is the same size ".$this->id."->".$id);
+                        $this->chunksSize[$id] = $size;
+                        $deferred->resolve($path);
+                        return;
                     } else {
-        
-                        $file = yield \Amp\File\openFile($path, "w");
-        
-                        $request = new \Amp\Http\Client\Request($this->url);
+                        $app->logger->log("WARNING", "[DownloadClient] Chunk already exists but is not the same size (".$size."/".$this->chunkSize.") ".$this->id."->".$id);
+                    }
 
-                        $request->setBodySizeLimit((int)$this->chunkSize + ($this->chunkSize*0.1));
-                        $request->setTransferTimeout((int)(60 * 60 * 1000));
+                }
+            } catch (\Throwable $error) {
+                $app->logger->log("ERROR", "[DownloadClient] Error Chunk exists check: ".$path. " ".$error->getMessage(), ['exception'=>$error]);
+            }
+            // =============================================================
 
-                        $request->setHeader("Range", "bytes=".$start."-".$end);
-                        //$request->setTlsHandshakeTimeout(1);
+
+            $app->createFolder($dir)->onResolve(function ($error, $exists) use ($app, $_this, $deferred, $start, $end, $path, $id) {
+                if($error) {
+                    $app->logger->log("ERROR", "[DownloadClient] Error creating folder: ".$this->dir. " ".$error->getMessage(), ['exception'=>$error]);
+                    $this->error[] = "Error creating folder";
+                    $deferred->fail($error);
+                    return;
+                } else {
+
+                    // =============================================================
+                    // Download Chunk
+                    $app->filesystem->touch($path)->onResolve(function ($error, $value) use ($app, $deferred, $start, $end, $path, $id) {
+                        if ($error) {
+                            $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
+                            $deferred->fail($error);
+                        } else {
+            
+                            $file = yield \Amp\File\openFile($path, "w");
+            
+                            $request = new \Amp\Http\Client\Request($this->url);
+
+                            $request->setBodySizeLimit((int)$this->chunkSize + ($this->chunkSize*0.1));
+                            $request->setTransferTimeout((int)(60 * 60 * 1000));
+
+                            $request->setHeader("Range", "bytes=".$start."-".$end);
+                            //$request->setTlsHandshakeTimeout(1);
+            
+                            try {
+
+                                $this->client->request($request)->onResolve(function ($error, $response) use ($app, $file, $deferred, $start, $end, $path, $id) {
+            
+                                    if ($error) {
+                                        $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
+                                        $deferred->fail($error);
+                                        yield $file->close();
+                                        return;
+                                    } else {
+                
+                                        $headers = $response->getHeaders();
+                
+                                        $size = $headers['content-length'][0];
+                                        $body = $response->getBody();
+                                        $this->chunksSize[$id] = 0;
         
-                        $this->client->request($request)->onResolve(function ($error, $response) use ($app, $file, $deferred, $start, $end, $path, $id) {
+                                        while (null !== $chunk = yield $body->read()) {
+                                            yield $file->write($chunk);
+                
+                                            $this->chunksSize[$id] += strlen($chunk);
+                                            $this->secData += strlen($chunk);
+                
+                                            // speed reduction pause
+                                            if($this->secData >= $this->speedLimit) {
+                                                yield \Amp\delay(1000);
+                                            }
+                                        }
+                
+                                        yield $file->close();
         
-                            if ($error) {
+                                        if($this->chunksSize[$id] != $size) {
+                                            $deferred->fail(new \Exception("Download chunk failed. Size mismatch."));
+                                        } else {
+                                            $deferred->resolve($path);
+                                        }
+                
+                                    }
+                
+                
+                                });
+
+                            } catch (\Throwable $error) {
                                 $app->logger->log("ERROR", $error->getMessage(), ['exception'=>$error]);
                                 $deferred->fail($error);
                                 yield $file->close();
                                 return;
-                            } else {
-        
-                                $headers = $response->getHeaders();
-        
-                                $size = $headers['content-length'][0];
-                                $body = $response->getBody();
-                                $this->chunksSize[$id] = 0;
-
-                                while (null !== $chunk = yield $body->read()) {
-                                    yield $file->write($chunk);
-        
-                                    $this->chunksSize[$id] += strlen($chunk);
-                                    $this->secData += strlen($chunk);
-        
-                                    // speed reduction pause
-                                    if($this->secData >= $this->speedLimit) {
-                                        yield \Amp\delay(1000);
-                                    }
-                                }
-        
-                                yield $file->close();
-
-                                if($this->chunksSize[$id] != $size) {
-                                    $deferred->fail(new \Exception("Download chunk failed. Size mismatch."));
-                                } else {
-                                    $deferred->resolve($path);
-                                    $app->logger->log("DEBUG", "[DownloadClient] Chunk completed ".$path);
-                                }
-        
                             }
-        
-        
-                        });
 
-                    }
-                });
 
-            }
+                        }
+                    });
+                    // =============================================================
+
+                }
+
+            });
+
 
         });
 
@@ -411,6 +473,9 @@ class Download {
 
         \Amp\asyncCall(function() use ($app, $_this, $deferred) {
 
+            $tmpFileName = \tuefekci\helpers\Strings::random(16);
+            $tmpFilePath = $this->dir."/".$tmpFileName;
+
             yield new \Amp\Delayed(5000);
 
             try {
@@ -424,72 +489,93 @@ class Download {
 
             $this->app->logger->log("DEBUG", "[DownloadClient] Finalizing download");
 
-            $app->filesystem->touch($this->path)->onResolve(function ($error, $value) use ($app, $deferred) {
+            $app->filesystem->touch($tmpFilePath)->onResolve(function ($error, $value) use ($app, $deferred, $tmpFilePath) {
                 if ($error) {
-                    $app->logger->log("ERROR", "[DownloadClient] finalizeDownload touch ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                    $app->logger->log("ERROR", "[DownloadClient] finalizeDownload touch ". $this->id . ": " . $error->getMessage(), ['exception'=>$error]);
                     $deferred->fail($error);
                     return;
                 } else {
 
                     try {
-                        $file = yield \Amp\File\openFile($this->path, "w");
+                        $file = yield \Amp\File\openFile($tmpFilePath, "w");
                     } catch (\Throwable $error) {
-                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->id . ": " . $error->getMessage(), ['exception'=>$error]);
                         $deferred->fail($error);   
                         yield $file->close();
+
+                        try {
+                            yield $app->filesystem->deleteFile($tmpFilePath);
+                        } catch (\Throwable $error) {
+                            $app->logger->log("ERROR", "[DownloadClient] finalizeDownload error deleteFile ". $tmpFilePath . ": " . $error->getMessage(), ['exception'=>$error]);
+                        }
+
                         return;
                     }
 
                     foreach($this->chunkData as $chunk) {
 
                         try {
+                            $i = array_search($chunk['id'], array_keys($this->chunkData));
+                            $app->logger->log("DEBUG", "[DownloadClient] Download finalize ".$this->id." write chunk ".$i."/".$this->chunkCount ." | ".\tuefekci\helpers\Strings::filesizeFormatted(($this->chunkSize*$i))."/".\tuefekci\helpers\Strings::filesizeFormatted($this->size));
                             yield $file->write(yield $app->filesystem->read($chunk['path']));
                         } catch (\Throwable $error) {
-                            $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                            $app->logger->log("ERROR", "[DownloadClient] finalizeDownload write ". $this->id . ": " . $error->getMessage(), ['exception'=>$error]);
                             $deferred->fail($error);  
                             yield $file->close(); 
+
+                            try {
+                                yield $app->filesystem->deleteFile($tmpFilePath);
+                            } catch (\Throwable $error) {
+                                $app->logger->log("ERROR", "[DownloadClient] finalizeDownload error deleteFile ". $tmpFilePath . ": " . $error->getMessage(), ['exception'=>$error]);
+                            }
+
                             return;
                         }
 
                     }
 
+                    // Close file.
                     yield $file->close();
 
+                    yield new \Amp\Delayed(1000);
 
                     try {
 
-                        if(yield $app->filesystem->exists($this->path)) {
+                        $fileSize = yield $app->filesystem->getSize($tmpFilePath);
 
-                            $fileSize = yield $app->filesystem->getSize($this->path);
+                        if((int) $fileSize != (int) $this->size) {
 
-                            if($fileSize != $this->size) {
+                            yield $app->filesystem->deleteFile($tmpFilePath);
+                            $this->done = false;
+                            $deferred->fail(new \Exception("Size mismatch."));
 
-                                yield $app->filesystem->deleteFile($this->path);
-                                $this->done = false;
-                                $deferred->fail(new \Exception("Download finalize failed. Size mismatch."));
-
-                            } else {
-
-                                // Remove chunks
-                                foreach($this->chunkData as $chunk) {
-
-                                    try {
-                                        $app->filesystem->deleteFile($chunk['path']);
-                                    } catch (\Throwable $error) {
-                                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload removeChunk ". $chunk['path'] . ": " . $error->getMessage(), ['exception'=>$error]);
-                                    }
-            
-                                }
-
-                                $app->logger->log("DEBUG", "[DownloadClient] Download finalize completed ".$this->path);
-                                $deferred->resolve($this->path);
-                            }
                         } else {
-                            $deferred->fail(new \Exception("Download finalize failed. File not found."));
+
+                            // Remove chunks
+                            foreach($this->chunkData as $chunk) {
+
+                                try {
+                                    yield $app->filesystem->deleteFile($chunk['path']);
+                                } catch (\Throwable $error) {
+                                    $app->logger->log("ERROR", "[DownloadClient] finalizeDownload removeChunk ". $chunk['path'] . ": " . $error->getMessage(), ['exception'=>$error]);
+                                }
+        
+                            }
+
+                            $app->logger->log("DEBUG", "[DownloadClient] Download finalize completed ".$this->path);
+                            yield $app->filesystem->move($tmpFilePath, $this->path);
+                            yield new \Amp\Delayed(1000);
+                            $deferred->resolve($this->path);
                         }
 
                     } catch (\Throwable $error) {
-                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload end try ". $this->path . ": " . $error->getMessage(), ['exception'=>$error]);
+                        $app->logger->log("ERROR", "[DownloadClient] finalizeDownload ". $this->id . ": " . $error->getMessage(), ['exception'=>$error]);
+                        try {
+                            yield $app->filesystem->deleteFile($tmpFilePath);
+                        } catch (\Throwable $error) {
+                            $app->logger->log("ERROR", "[DownloadClient] finalizeDownload error deleteFile ". $tmpFilePath . ": " . $error->getMessage(), ['exception'=>$error]);
+                        }
+                        $deferred->fail($error);
                     }
 
                 }

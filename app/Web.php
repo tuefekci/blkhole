@@ -93,7 +93,7 @@ class Web {
 
                 foreach($data as $path => $magnet) {
 
-                    if(!empty($magnet['provider'])) {
+                    if(!empty($magnet['provider']) && !empty($magnet['provider']->id)) {
 
                         $status = $this->app->provider->status($magnet['provider']->id);
 

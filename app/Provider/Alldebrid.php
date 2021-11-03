@@ -34,21 +34,30 @@ class Alldebrid extends ProviderInterface {
         $deferred = new \Amp\Deferred;
 
         $app = $this->app;
- 
         $client = $this->client;
-        $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/upload?agent=".$this->agent ."&apikey=".$this->apiKey."&magnets[]=".urlencode($magnet));
 
-        $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
 
-            if ($error) {
-                $app->logger->log("ERROR", "[Alldebrid] addMagnet->request", ['exception'=>$error]);
-            } else {
-                $data = yield $response->getBody()->buffer();
-                $data = json_decode($data);
+        \Amp\asyncCall(function() use ($app, $client, $deferred, $magnet) {
+            $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/upload?agent=".$this->agent ."&apikey=".$this->apiKey."&magnets[]=".urlencode($magnet));
 
-                $deferred->resolve($data->data->magnets[0]);
-            }
+            $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
 
+                if ($error) {
+                    $app->logger->log("ERROR", "[Alldebrid] addMagnet->request", ['exception'=>$error]);
+                } else {
+                    $data = yield $response->getBody()->buffer();
+                    $data = json_decode($data);
+
+                    if($data && $data->status == "success") {
+                        $deferred->resolve($data->data->magnets[0]);
+                    } else {
+                        yield new \Amp\Delayed(1000);
+                        $deferred->fail(new \Exception("addMagnet failed."));
+                    }
+
+                }
+
+            });
         });
 
         return $deferred->promise();
@@ -63,31 +72,35 @@ class Alldebrid extends ProviderInterface {
 
         $deferred = new \Amp\Deferred;
 
-        $app = $this->app;
- 
-        $client = $this->client;
-        $request = new \Amp\Http\Client\Request($this->apiUrl."link/unlock?agent=".$this->agent ."&apikey=".$this->apiKey."&link=".urlencode($link));
 
-        $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred, $link) {
+        \Amp\asyncCall(function() use ($deferred, $link) {
 
-            if ($error) {
-                $app->logger->log("ERROR", "[Alldebrid] addMagnet->request", ['exception'=>$error]);
-            } else {
-                $data = yield $response->getBody()->buffer();
-                $data = json_decode($data);
+            $app = $this->app;
+    
+            $client = $this->client;
+            $request = new \Amp\Http\Client\Request($this->apiUrl."link/unlock?agent=".$this->agent ."&apikey=".$this->apiKey."&link=".urlencode($link));
 
-                if($data && $data->status == "success") {
-                    $app->logger->log("INFO", "[Alldebrid] getDownload->(".$link.")", ['status'=>$data->status, 'exception'=>$error]);
+            $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred, $link) {
 
-                    if(isset($data->data->delayed)) {
-                        $deferred->fail(new \Throwable("Download link delayed."));
-                    } else {
-                        $deferred->resolve($data->data);
+                if ($error) {
+                    $app->logger->log("ERROR", "[Alldebrid] addMagnet->request", ['exception'=>$error]);
+                } else {
+                    $data = yield $response->getBody()->buffer();
+                    $data = json_decode($data);
+
+                    if($data && $data->status == "success") {
+                        $app->logger->log("DEBUG", "[Alldebrid] getDownload->(".$link.")", ['status'=>$data->status, 'exception'=>$error]);
+
+                        if(isset($data->data->delayed)) {
+                            $deferred->fail(new \Throwable("Download link delayed."));
+                        } else {
+                            $deferred->resolve($data->data);
+                        }
                     }
+
                 }
 
-            }
-
+            });
         });
 
         return $deferred->promise();
@@ -98,28 +111,31 @@ class Alldebrid extends ProviderInterface {
         //https://api.alldebrid.com/v4/magnet/delete?agent=myAppName&apikey=someValidApikeyYouGenerated&id=MAGNETID
         $deferred = new \Amp\Deferred;
 
+        \Amp\asyncCall(function() use ($deferred, $id) {
 
-        $app = $this->app;
- 
-        $client = $this->client;
-        $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/delete?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id);
+            $app = $this->app;
+    
+            $client = $this->client;
+            $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/delete?agent=".$this->agent ."&apikey=".$this->apiKey."&id=".$id);
 
-        $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
+            $client->request($request)->onResolve(function ($error, $response) use ($app, $deferred) {
 
-            if ($error) {
-                $app->error("getStatus->request", $error->getMessage());
-            } else {
-
-                $data = yield $response->getBody()->buffer();
-                $data = json_decode($data);
-
-                if($data->status == "success") {
-                    $deferred->resolve($data->data);
+                if ($error) {
+                    $app->error("getStatus->request", $error->getMessage());
                 } else {
-                    $deferred->fail(new \Throwable("Delete failed."));
+
+                    $data = yield $response->getBody()->buffer();
+                    $data = json_decode($data);
+
+                    if($data->status == "success") {
+                        $deferred->resolve($data->data);
+                    } else {
+                        $deferred->fail(new \Throwable("Delete failed."));
+                    }
+
                 }
 
-            }
+            });
 
         });
 
@@ -145,28 +161,31 @@ class Alldebrid extends ProviderInterface {
 
     public function getStatus() {
 
-        $app = $this->app;
- 
-        $client = $this->client;
-        $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/status?agent=".$this->agent ."&apikey=".$this->apiKey);
+        \Amp\asyncCall(function() {
 
-        $client->request($request)->onResolve(function ($error, $response) use ($app) {
+            $app = $this->app;
+    
+            $client = $this->client;
+            $request = new \Amp\Http\Client\Request($this->apiUrl."magnet/status?agent=".$this->agent ."&apikey=".$this->apiKey);
 
-            if ($error) {
-                $app->logger->log("ERROR", "[Alldebrid] getStatus->request", ['exception'=>$error]);
-            } else {
+            $client->request($request)->onResolve(function ($error, $response) use ($app) {
 
-                $data = yield $response->getBody()->buffer();
-                $data = json_decode($data);
+                if ($error) {
+                    $app->logger->log("ERROR", "[Alldebrid] getStatus->request", ['exception'=>$error]);
+                } else {
 
-                $this->status = array();
+                    $data = yield $response->getBody()->buffer();
+                    $data = json_decode($data);
 
-                foreach($data->data->magnets  as $magnet) {
-                    $this->status[$magnet->id] = $magnet;
+                    $this->status = array();
+
+                    foreach($data->data->magnets  as $magnet) {
+                        $this->status[$magnet->id] = $magnet;
+                    }
+
                 }
 
-            }
-
+            });
         });
 
     }
