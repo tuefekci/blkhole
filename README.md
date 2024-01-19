@@ -1,12 +1,14 @@
-<div style="background-color: yellow; text-align: center; padding: 10px; margin-bottom:15px;">
-	<img src="https://github.com/tuefekci/blkhole/raw/main/web/src/logo.png"/>
-</div>
+# blkhole
 
-blkhole is a download management tool for AllDebrid cloud downloads, which allows automatic downloads to your local network.
+Blkhole serves as a download management tool designed for AllDebrid cloud downloads, facilitating the seamless automation of downloads directly to your local network.
 
-- Web interface to manage <a href="https://alldebrid.com/?uid=2rp0k&lang=en">alldebrid.com</a> downloads, cloud Torrent, Magnet and DDL links.
-- Category based automatic downloader of finished cloud tasks to local file system.
-- Download imp
+Key features include:
+- A user-friendly web interface for the management of <a href="https://alldebrid.com/?uid=2rp0k&lang=en">alldebrid.com</a> downloads, cloud Torrent, Magnet, and DDL links.
+- Automated categorization-based downloading of completed cloud tasks to the local file system.
+- Download enhancements and optimizations.
+
+![alt text](https://github.com/tuefekci/blkhole/raw/main/web/src/screenshot.png "Web Interface")
+
 
 
 ---
