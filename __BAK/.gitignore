@@ -1,0 +1,36 @@
+##############################################################
+# Common
+##############################################################
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# Local History for Visual Studio Code
+.history/
+
+composer.phar
+/vendor/
+/node_modules/
+
+# Commit your application's lock file https://getcomposer.org/doc/01-basic-usage.md#commit-your-composer-lock-file-to-version-control
+# You may choose to ignore a library lock file http://getcomposer.org/doc/02-libraries.md#lock-file
+# composer.lock
+
+##############################################################
+
+##############################################################
+# Specific
+##############################################################
+
+config.ini
+
+!data/config
+data/cache
+data/blackhole
+data/downloads
+data/logs
+data/tmp
+testFiles/
