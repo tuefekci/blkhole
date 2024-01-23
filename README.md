@@ -1,66 +1,88 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# blkhole
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Blkhole serves as a download management tool designed for AllDebrid cloud downloads, facilitating the seamless automation of downloads directly to your local network.
 
-## About Laravel
+Key features include:
+- A user-friendly web interface for the management of <a href="https://alldebrid.com/?uid=2rp0k&lang=en">alldebrid.com</a> downloads, cloud Torrent, Magnet, and DDL links.
+- Automated categorization-based downloading of completed cloud tasks to the local file system.
+- Download enhancements and optimizations.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+![alt text](https://github.com/tuefekci/blkhole/raw/main/web/src/screenshot.png "Web Interface")
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
 
-## Learning Laravel
+---
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+# Getting Started
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+Be aware config and env vars will only be used if the var is not initialized in the store so if you want to reset the app completely you need to delete store.blk in data/config folder.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 2000 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+blkhole has no security options because it is intended to be run in your local network. If you want to use it in a public network you need to setup your own security, for example reverse nginx with password protection.
 
-## Laravel Sponsors
+### Features
+- Magnet links
+- DDL links (based on available DDL services by provider)
+- Torrents
+- Chunked Downloads
+- Resumable Downloads
+- Bandwidth Limitation 
+- Connection Limitation 
+- Automatic cleanup of finished downloads (additional to the cleanup of finished tasks in the cloud)
+- Automatic cleanup of failed downloads (additional to the cleanup of failed tasks in the cloud)
+- Automatic cleanup of old files (files which are not active downloads will be removed after 24 hours)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+---
 
-### Premium Partners
+## Settings
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+#### download
+- parallel=3 # Number of parallel downloads
+- connections=3 # Number of connections per download
+- bandwidth=3072 # Max bandwidth in B/s
+- chunkSize=3200 # Chunk size in B (faster connection should have bigger chunk size slower smaller this is specific to your network mostly)
 
-## Contributing
+### Docker
+- Have a look at Docker-Compose file and edit it to your preferences.
+- Everything in the Config.ini can also be used in the ENV Vars Section just combine header with the key all in uppercase for example: ALLDEBRID_APIKEY or WEBINTERFACE_PORT
+- run docker-compose with your compose file or import to Portainer etc.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### Standalone PHP > 7.4 (older versions might work but i am not testing them)
+- Copy data/config/config_example.ini add your alldebrid api key etc. and rename to config.ini.
+- run composer update
+- run php main.php
 
-## Code of Conduct
+----
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Screenshots
+![alt text](https://github.com/tuefekci/blkhole/raw/main/web/src/screenshot.png "Web Interface")
 
-## Security Vulnerabilities
+---
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Tested with
+- Radarr
+- Sonarr
 
-## License
+---
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Todo (Goals):
+- Self Updating
+- Unpack Archives after Download & CRC Check
+- Setup a proper color scheme for the web interface
+- Add Multi Provider / Multi Source Support
+
+---
+
+## AllDebrid
+[<img src="https://cdn.alldebrid.com/lib/images/features.en.gif">](https://alldebrid.com/?uid=2rp0k&lang=en)
+
+AllDebrid is a site that allow to generate links and download speeds from more than 71 file hosts and 995 streaming platforms, without having to pay a premium account on each file hosters.
+AllDebrid offer multiple tools to make it easier for you: addon for browsers, streaming, torrent file conversion, support for multiple download managers such as Jdownloader, and more!
+No more limitations from the file hosters, enjoy your downloads at full speed!
+
+[Register for AllDebrid with my invite link and support me](https://alldebrid.com/?uid=2rp0k&lang=en)
+
+---
+
+## Similar Projects
+- [premiumizer for premiumize](https://github.com/piejanssens/premiumizer)
+
