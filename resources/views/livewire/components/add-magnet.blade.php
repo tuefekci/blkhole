@@ -41,7 +41,7 @@ new class extends Component
 }; ?>
 
 <section>
-    <form wire:submit="save" class="mt-4 space-y-4">
+    <form wire:submit="save" class="mt-2 space-y-4">
         <div>
             <x-text-input wire:model="url" name="url" id="magnet{{ $fileFieldId }}" class="mt-1 block w-full h-10" placeholder="magnet:xt=urn:btih:xxx" required />
             <x-input-error class="mt-2" :messages="$errors->get('url')" />

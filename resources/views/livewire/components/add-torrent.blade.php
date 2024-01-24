@@ -45,7 +45,7 @@ new class extends Component
 }; ?>
 
 <section>
-    <form wire:submit="save" class="mt-4 space-y-4">
+    <form wire:submit="save" class="mt-2 space-y-4">
         <div>
             <x-file-input wire:model="file" name="file" id="upload{{ $fileFieldId }}" class="mt-1 block w-full h-10" required />
             <x-input-error class="mt-2" :messages="$errors->get('file')" />

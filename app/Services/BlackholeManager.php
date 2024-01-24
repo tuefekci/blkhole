@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Helpers\UrlHelper;
 use Error;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Facades\Log;
@@ -121,8 +122,10 @@ class BlackholeManager
 			// Additional checks or actions can be added here if needed
 			// ...
 	
+	
+
 			// If all checks pass, you can proceed with your logic
-			Storage::put($this->pathWeb . sha1($ddlUrl).".ddl", $ddlUrl);
+			Storage::put($this->pathWeb . base64_encode(UrlHelper::cleanUrl($ddlUrl)).".ddl", $ddlUrl);
 			return true;
 	
 		} catch (\Exception $e) {

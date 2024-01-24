@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('download_file_chunks', function (Blueprint $table) {
             $table->id();
+            $table->boolean('completed')->default(false);
             $table->unsignedBigInteger('start_byte');
             $table->unsignedBigInteger('end_byte');
             $table->foreignId('download_file_id')->constrained();

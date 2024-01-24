@@ -16,12 +16,15 @@ return new class extends Migration
             $table->string('name');
             $table->integer('status');
             
-            $table->text('path_src')->unique();
+            $table->text('src_path')->unique();
+            $table->string('src_type');
+
+            $table->text('dst_path')->unique()->nullable();
+            $table->text('tmp_path')->unique()->nullable();
           
-            
-            $table->string('debrid_provider');
-            $table->string('debrid_id');
-            $table->string('debrid_status');
+            $table->string('debrid_provider')->nullable();
+            $table->string('debrid_id')->nullable();
+            $table->string('debrid_status')->nullable();
 
             $table->timestamps();
         });

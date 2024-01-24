@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('download_files', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('path');
+            $table->text('tmp_path')->unique();
             $table->foreignId('download_id')->constrained();
             $table->timestamps();
         });
