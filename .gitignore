@@ -3,7 +3,7 @@
 /public/build
 /public/hot
 /public/storage
-/storage/
+
 /vendor
 .env
 .env.backup
@@ -18,3 +18,11 @@ yarn-error.log
 /.idea
 /.vscode
 
+
+*.log
+*.sqlite
+storage/framework/cache/
+storage/framework/views/
+storage/framework/sessions/
+storage/app/blkhole/
+storage/app/livewire-tmp/
