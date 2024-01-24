@@ -14,6 +14,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Telescope
+        if ($this->app->environment('local')) {
+            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            $this->app->register(TelescopeServiceProvider::class);
+        }
+
         //
         $this->app->singleton("BlackholeManager", function ($app) {
             return new BlackholeManager();
@@ -30,8 +36,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        new BlackholeManager();
-
         LogViewer::auth(function ($request) {
             return $request->user();
         });
