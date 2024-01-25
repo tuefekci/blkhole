@@ -14,7 +14,8 @@ return new class extends Migration
         Schema::create('downloads', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->integer('status');
+            $table->integer('status')->default(0);
+            $table->boolean('paused')->default(false);
             
             $table->text('src_path')->unique();
             $table->string('src_type');
