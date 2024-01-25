@@ -4,6 +4,8 @@ namespace App\Services\Debrid\Implementations;
 
 use App\Models\Setting;
 use App\Services\Debrid\Contracts\DebridServiceInterface;
+use Error;
+use Exception;
 use Illuminate\Support\Facades\Log;
 
 class Alldebrid implements DebridServiceInterface
@@ -18,62 +20,80 @@ class Alldebrid implements DebridServiceInterface
 		$this->alldebrid->setErrorMode('exception');
     }
 
-    public function addTorrent($torrentPath) {
-		try {
-			$response = $this->alldebrid->magnetUploadFile($torrentPath);
-			return $response[0];
-		} catch (\Throwable $th) {
-			//throw $th;
-			Log::error($th->getMessage());
+	public function getProviderName() {
+		return 'alldebrid';
+	}
+
+	public function add($type, $content) {
+		switch ($type) {
+			case 'torrent':
+				return $this->addTorrent($content);
+				break;
+			case 'magnet':
+				return $this->addMagnet($content);
+				break;
+			case 'ddl':
+				return $this->addDDL($content);
+				break;
+			default:
+				break;
 		}
 
+		Log::error("Alldebrid->add Error: Unknown Type!");
 		return false;
+	}
+
+    public function addTorrent($torrent) {
+		try {
+			$response = $this->alldebrid->magnetUploadFile($torrent, 'inline');
+			return $response;
+		} catch (\Throwable $th) {
+			Log::error("alldebrid->addTorrent: " . $th->getMessage());
+			throw $th;
+		}
     }
 
 	public function addMagnet($magnet) {
 		try {
 			$response = $this->alldebrid->magnetUpload($magnet);
-			return $response[0];
+			return $response;
 		} catch (\Throwable $th) {
-			//throw $th;
-			Log::error($th->getMessage());
+			Log::error("alldebrid->addMagnet: " . $th->getMessage());
+			throw $th;
 		}
-
-		return false;
     }
 
 	public function addDDL($url) {
 
-		$result = $this->getDownload($url);
+		try {
+			$result = $this->getDownload($url);
 
-		if(!$result) {
-			return false;
+			return [
+				"magnet" => $url,
+				"hash" => "",
+				"name" => $result['filename'],
+				"filename_original" => "",
+				"size" => $result['filesize'],
+				"ready" => true,
+				"id" => $result['id']
+			];
+		} catch (\Throwable $th) {
+			Log::error("alldebrid->addddl: " . $th->getMessage());
+			throw $th;
 		}
-
-		return [
-			"magnet" => $url,
-			"hash" => "",
-			"name" => $result['filename'],
-			"filename_original" => "",
-			"size" => $result['filesize'],
-			"ready" => true,
-			"id" => $result['id']
-		];
     }
 
 	public function getDownload($url) {
 		try {
-			$link = $this->alldebrid->link($url);
-
-			if($link->isSupported()) {
-				$response = $link->unlock();
-				return $response['data'];
+			if($this->alldebrid->linkIsSupported($url)) {
+				$response = $this->alldebrid->linkUnlock($url);
+				return $response;
 			} else {
-				return false;
+				Log::error("alldebrid->getDownload: !isSupported");
 			}
 		} catch (\Throwable $th) {
-			//throw $th;
-			Log::error($th->getMessage());
+			Log::error("alldebrid->getDownload: " . $th->getMessage());
+			throw $th;
 		}
 
 		return false;
@@ -92,7 +112,8 @@ class Alldebrid implements DebridServiceInterface
 
 		} catch (\Throwable $th) {
 			//throw $th;
-			Log::error($th->getMessage());
+			Log::error("alldebrid->getStatus: " . $th->getMessage());
+			throw $th;
 		}
 
 		return false;
@@ -127,11 +148,9 @@ class Alldebrid implements DebridServiceInterface
 			$response = $this->alldebrid->magnetDelete($id);
 			return true;
 		} catch (\Throwable $th) {
-			//throw $th;
-			Log::error($th->getMessage());
+			Log::error("alldebrid->delete: " . $th->getMessage());
+			throw $th;
 		}
-
-		return false;
 	}
 
 	public function restart($id) {
@@ -139,11 +158,9 @@ class Alldebrid implements DebridServiceInterface
 			$response = $this->alldebrid->magnetRestart($id);
 			return true;
 		} catch (\Throwable $th) {
-			//throw $th;
-			Log::error($th->getMessage());
+			Log::error("alldebrid->restart: " . $th->getMessage());
+			throw $th;
 		}
-
-		return false;
 	}
 
 }
