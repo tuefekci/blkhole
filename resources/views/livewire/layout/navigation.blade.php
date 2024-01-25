@@ -75,6 +75,8 @@ new class extends Component
                         </button>
                     </x-slot>
                 </x-dropdown>
+
+                <livewire:components.play-pause-button />
             </div>
 
             <!-- Hamburger -->

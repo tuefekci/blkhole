@@ -23,6 +23,7 @@ return new class extends Migration
         Setting::create(['key' => 'connections', 'value' => '3']);
         Setting::create(['key' => 'bandwidth', 'value' => '524288']);
         Setting::create(['key' => 'chunkSize', 'value' => '524288']);
+        Setting::create(['key' => 'paused', 'value' => 'false']);
     }
 
     /**
