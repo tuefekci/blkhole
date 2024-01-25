@@ -14,7 +14,7 @@ new class extends Component
      */
     public function mount(): void
     {
-		$this->paused = Setting::get('paused');
+		$this->paused = filter_var(Setting::get('paused'), FILTER_VALIDATE_BOOLEAN);
     }
 
     /**
