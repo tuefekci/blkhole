@@ -2,6 +2,7 @@
 
 use App\Models\Setting;
 use App\Providers\RouteServiceProvider;
+use App\Services\DebridServiceFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -16,12 +17,15 @@ new class extends Component
     #[Validate('required')] 
     public $token;
 
+    public $accountStatus = [];
+
     /**
      * Mount the component.
      */
     public function mount(): void
     {
         $this->token = Setting::get('account_0_token');
+        $this->getAccountStatus();
     }
 
     /**
@@ -30,8 +34,15 @@ new class extends Component
     public function updateAccounts(): void
     {
         Setting::updateOrCreate(['key' => 'account_0_token'], ['value' => $this->token]);
-
+        $this->getAccountStatus();
         $this->dispatch('accounts-updated');
+    }
+
+    private function getAccountStatus() {
+        if(!empty($this->token)) {
+            $alldebrid = DebridServiceFactory::createDebridService('alldebrid');
+            $this->accountStatus = $alldebrid->getUserStatus();
+        }
     }
 
 
@@ -55,6 +66,23 @@ new class extends Component
             <x-text-input wire:model="token" id="token" name="token" type="text" class="mt-1 block w-full" required />
             <x-input-error class="mt-2" :messages="$errors->get('token')" />
         </div>
+
+        @if(!empty($accountStatus))
+
+            @if(!$accountStatus['status'])
+
+                <div class="flex items-center bg-red-500 text-white text-sm font-bold px-4 py-3" role="alert">
+                    <p>{{ $accountStatus['message'] }}</p>
+                </div>
+
+            @else
+
+                <div class="flex items-center bg-blue-500 text-white text-sm font-bold px-4 py-3" role="alert">
+                    <p>{{ $accountStatus['message'] }}</p>
+                </div>
+
+            @endif
+        @endif
 
         <div class="flex items-center gap-4">
             <x-primary-button>{{ __('Save') }}</x-primary-button>

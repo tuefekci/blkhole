@@ -4,8 +4,55 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "921096646625e1a15f2bc56c965c7d5f",
+    "content-hash": "a7aa5a11ca4380aeabd2c7da755da0eb",
     "packages": [
+        {
+            "name": "alldebrid/alldebrid-php",
+            "version": "1.0.2",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/Alldebrid/alldebrid-php.git",
+                "reference": "5b5b543cb3021283e63e2dd0d48253e419acec61"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/Alldebrid/alldebrid-php/zipball/5b5b543cb3021283e63e2dd0d48253e419acec61",
+                "reference": "5b5b543cb3021283e63e2dd0d48253e419acec61",
+                "shasum": ""
+            },
+            "require": {
+                "ext-json": "*",
+                "php": ">=7.1"
+            },
+            "require-dev": {
+                "atoum/atoum": "^3.4",
+                "atoum/reports-extension": "^3.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Alldebrid\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "description": "Simple wrapper around Alldebrid API v4 in PHP",
+            "homepage": "https://docs.alldebrid.com",
+            "keywords": [
+                "alldebrid",
+                "api",
+                "wrapper"
+            ],
+            "support": {
+                "docs": "https://docs.alldebrid.com",
+                "forum": "https://forum.alldebrid.com/",
+                "issues": "https://github.com/Alldebrid/alldebrid-php/issues",
+                "source": "https://github.com/Alldebrid/alldebrid-php/tree/1.0.2"
+            },
+            "time": "2020-03-18T15:36:07+00:00"
+        },
         {
             "name": "brick/math",
             "version": "0.11.0",
