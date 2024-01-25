@@ -1,5 +1,3 @@
-@props(['fill' => "#000000"])
-
 <svg version="1.0" xmlns="http://www.w3.org/2000/svg" width="300.000000pt" height="69.000000pt" viewBox="0 0 300.000000 69.000000" preserveAspectRatio="xMidYMid meet" {{ $attributes }}>
 
     <g transform="translate(0.000000,69.000000) scale(0.100000,-0.100000)" stroke="none">
