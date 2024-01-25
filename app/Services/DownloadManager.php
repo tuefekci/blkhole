@@ -97,7 +97,8 @@ class DownloadManager
         return $progressPercentage;
     }
 
-	public function pollBlackhole() {
+	public function pollBlackhole()
+	{
 		$blackholePath = config('blkhole.paths.blackhole');
 		$files = Storage::allFiles($blackholePath);
 	
@@ -105,29 +106,57 @@ class DownloadManager
 			// Check if the file has a valid extension
 			if ($this->isValidExtension($file)) {
 				try {
-
 					$fileName = pathinfo($file, PATHINFO_FILENAME);
 					$fileType = pathinfo($file, PATHINFO_EXTENSION);
-
-					if($fileType === "ddl") {
+	
+					if ($fileType === "ddl") {
 						$fileName = base64_decode($fileName);
 					}
+	
+					// Check if the download already exists
+					if (!$this->downloadExists($file, $fileName, $fileType)) {
+						$download = new Download();
+						$download->name = $fileName;
+						$download->status = 0;
+						$download->src_path = $file;
+						$download->src_type = $fileType;
+	
+						try {
+							$debrid = DebridServiceFactory::createDebridService();
+							$debridResponse = $debrid->add($fileType, Storage::get($file));
+	
+							if(!empty($debridResponse['name'])) {
+								$download->name = $debridResponse['name'];
+							}
 
-					$download = new Download();
-					$download->name = $fileName;
-					$download->status = 0;
-					$download->src_path = $file;
-					$download->src_type = $fileType;
-
-					$download->save();	
-
+							$download->debrid_provider = $debrid->getProviderName();
+							$download->debrid_id = $debridResponse['id'];
+							$download->debrid_status = $debridResponse['ready'];
+	
+							$download->save();
+						} catch (\Throwable $th) {
+							Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
+						}
+					} else {
+						Log::debug("Download already exists for: " . $file);
+					}
 				} catch (\Throwable $th) {
-					Log::error("pollBlackhole creating new Download failed for " . $file . " with error: ".$th->getMessage());
+					Log::error("pollBlackhole creating new Download failed for " . $file . " with error: " . $th->getMessage());
 				}
-
 			} else {
 				Log::error("isValidExtension failed for: " . $file);
 			}
 		}
+	}
+	
+	private function downloadExists($srcPath, $name, $srcType)
+	{
+		return Download::where('src_path', $srcPath)
+			->where('src_type', $srcType)
+			->exists();
+	}
+
+	public function pollDownloads() {
+
 	}
 }
