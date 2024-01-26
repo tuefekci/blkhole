@@ -22,9 +22,8 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::view('downloads', 'downloads')
-    ->middleware(['auth', 'verified'])
-    ->name('downloads');
+Route::view('downloads', 'downloads')->middleware(['auth', 'verified'])->name('downloads');
+Route::view('downloads/{id}', 'download')->middleware(['auth', 'verified'])->name('download');
 
 Route::view('profile', 'profile')
     ->middleware(['auth'])
