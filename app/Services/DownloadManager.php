@@ -97,6 +97,22 @@ class DownloadManager
         return $progressPercentage;
     }
 
+	public function pauseDownload($id) {
+		$download = Download::findOrFail($id);
+		$download->paused = !$download->paused;
+		$download->save();
+	}
+
+	public function deleteDownload($id) {
+		// Find the Download model instance
+		$download = Download::findOrFail($id);
+
+		Storage::delete($download->src_path);
+
+		// Delete the Download model instance
+		$download->delete();
+    }
+
 	public function pollBlackhole()
 	{
 		$blackholePath = config('blkhole.paths.blackhole');
