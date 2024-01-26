@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Services\BlackholeManager;
 use App\Services\DownloadManager;
 use Illuminate\Support\ServiceProvider;
-use Opcodes\LogViewer\Facades\LogViewer;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -36,9 +35,5 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        LogViewer::auth(function ($request) {
-            return $request->user();
-        });
-
     }
 }

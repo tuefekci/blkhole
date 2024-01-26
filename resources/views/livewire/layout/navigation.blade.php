@@ -63,10 +63,6 @@ new class extends Component
                             {{ __('Settings') }}
                         </x-dropdown-link>
 
-                        <x-dropdown-link href="/log-viewer" wire:navigate>
-                            {{ __('Log Viewer') }}
-                        </x-dropdown-link>
-
                         <!-- Authentication -->
                         <button wire:click="logout" class="w-full text-start">
                             <x-dropdown-link>
@@ -117,10 +113,6 @@ new class extends Component
 
                 <x-responsive-nav-link :href="route('settings')" wire:navigate>
                     {{ __('Settings') }}
-                </x-responsive-nav-link>
-
-                <x-responsive-nav-link href="/log-viewer" wire:navigate>
-                    {{ __('Log Viewer') }}
                 </x-responsive-nav-link>
 
                 <!-- Authentication -->
