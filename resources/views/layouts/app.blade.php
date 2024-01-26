@@ -1,3 +1,29 @@
+<?php
+
+    use Illuminate\Support\Facades\File;
+
+    // Get the path to the composer.json file
+    $composerJsonPath = base_path('composer.json');
+
+    $version = "BLEEDINGEDGE";
+
+    // Check if the file exists
+    if (File::exists($composerJsonPath)) {
+        // Read the contents of the composer.json file
+        $composerJsonContents = File::get($composerJsonPath);
+
+        // Decode the JSON contents into an array
+        $composerData = json_decode($composerJsonContents, true);
+
+        // Check if the version field exists in the decoded data
+        if (isset($composerData['version'])) {
+            // Retrieve the version field
+            $version = $composerData['version'];
+        }
+    }
+
+?>
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
     <head>
@@ -31,6 +57,10 @@
             <main>
                 {{ $slot }}
             </main>
+
+            <div class="min-w-full text-center text-sm font-light text-gray-900 dark:text-gray-100 pt-4">
+                Version: {{$version}} | Github: <a href="https://github.com/tuefekci/blkhole">github.com/tuefekci/blkhole</a>
+            </div>
         </div>
     </body>
 </html>
