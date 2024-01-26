@@ -61,7 +61,7 @@ new class extends Component
 			  <th scope="col" class=" px-6 py-4">Status</th>
 			  <th scope="col" class=" px-6 py-4">Progress</th>
 			  <th scope="col" class=" px-6 py-4">Last Update</th>
-              <th scope="col" class=" px-6 py-4">Actions</th>
+              <th scope="col" class=" px-6 py-4 hidden md:block">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -69,8 +69,8 @@ new class extends Component
 		  	@foreach($downloads as $download)
 				<tr class="border-b dark:border-gray-700 text-left">
 					<td class="whitespace-nowrap px-6 py-4 font-medium truncate" title="{{ $download->name }}">
-						@if(strlen($download->name) > 40)
-							{{ substr($download->name, 0, 40) }}...
+						@if(strlen($download->name) > 32)
+							{{ substr($download->name, 0, 32) }}...
 						@else
 							{{ $download->name }}
 						@endif
@@ -87,7 +87,7 @@ new class extends Component
 						</div>
 					</td>
 					<td class="whitespace-nowrap px-6 py-4">{{ $download->updated_at }}</td>
-					<td class="whitespace-nowrap px-6 py-4">
+					<td class="whitespace-nowrap px-6 py-4 w-32 hidden md:block">
 						<div class="grid grid-cols-3 gap-2">
             
 							<a href="/downloads/{{ $download->id }}" wire:navigate>
