@@ -8,6 +8,7 @@ new class extends Component
 {
 
 	public $downloads;
+	public $deleteModal;
 
     /**
      * Mount the component.
@@ -30,9 +31,19 @@ new class extends Component
 		// Delete the Download model instance
 		app("DownloadManager")->deleteDownload($id);
 
+		$this->deleteModal = false;
+
 		// refresh the downloads after deletion
 		$this->refreshDownloads();
     }
+
+	public function openDeleteModal($id) {
+		$this->deleteModal = $id;
+	}
+
+	public function closeDeleteModal() {
+		$this->deleteModal = false;
+	}
 
 }; ?>
 
@@ -97,7 +108,28 @@ new class extends Component
 								@endif
 							</button>
 
-							<button type="button" wire:click="deleteDownload({{ $download->id }})" title="{{ __('Delete Download') }}" class="fill-gray-500 dark:fill-gray-400 hover:fill-gray-700 dark:hover:fill-gray-300 cursor-pointer"> 
+							@if($deleteModal == $download->id)
+							<x-modal name="{{ __('Are you sure you want to delete this download?') }}" show="true" max-width="md">
+								<div class="flex items-center justify-center">
+									<div class=" rounded-lg overflow-hidden shadow-xl transform transition-all sm:max-w-lg sm:w-full" role="dialog" aria-modal="true" aria-labelledby="modal-headline">
+										<div class="p-6">
+											<div class="text-lg">
+												{{ __('Are you sure you want to delete this download?') }}<br/>
+											</div>
+
+											{{ __($download->src_type) }}: {{ $download->name }}
+
+											<div class="mt-4 flex justify-end">
+												<button wire:click="deleteDownload({{ $download->id }})" class="btn btn-red mr-2">{{ __('Delete') }}</button>
+												<button wire:click="closeDeleteModal" class="btn btn-gray">{{ __('Cancel') }}</button>
+											</div>
+										</div>
+									</div>
+								</div>
+							</x-modal>
+							@endif
+
+							<button type="button" wire:click="openDeleteModal({{ $download->id }})" title="{{ __('Delete Download') }}" class="fill-gray-500 dark:fill-gray-400 hover:fill-gray-700 dark:hover:fill-gray-300 cursor-pointer"> 
 								<svg width="24px" height="24px" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
 									<path d="M512 64a448 448 0 1 1 0 896 448 448 0 0 1 0-896zM288 512a38.4 38.4 0 0 0 38.4 38.4h371.2a38.4 38.4 0 0 0 0-76.8H326.4A38.4 38.4 0 0 0 288 512z"/>
 								</svg>
