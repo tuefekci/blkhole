@@ -59,7 +59,7 @@
             </main>
 
             <div class="min-w-full text-center text-sm font-light text-gray-900 dark:text-gray-100 pt-4">
-                Version: {{$version}} | Github: <a href="https://github.com/tuefekci/blkhole">github.com/tuefekci/blkhole</a>
+                Version: {{$version}} | Github: <a href="https://github.com/tuefekci/blkhole">/tuefekci/blkhole</a>
             </div>
         </div>
     </body>
