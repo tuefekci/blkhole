@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('download_links', function (Blueprint $table) {
             $table->id();
             $table->string('filename');
-            $table->string('link')->unique();
+            $table->string('link');
             $table->foreignId('download_id')->constrained();
             $table->timestamps();
         });

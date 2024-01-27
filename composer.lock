@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0a7e209b8a1aed03a679d72afa98aa9d",
+    "content-hash": "d8c08bb78d547f9d23b9823e60cece34",
     "packages": [
         {
             "name": "alldebrid/alldebrid-php",
@@ -52,6 +52,52 @@
                 "source": "https://github.com/Alldebrid/alldebrid-php/tree/1.0.2"
             },
             "time": "2020-03-18T15:36:07+00:00"
+        },
+        {
+            "name": "archtechx/enums",
+            "version": "v1.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/archtechx/enums.git",
+                "reference": "fc428d533d815178ff494eba85fa28797ca7995e"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/archtechx/enums/zipball/fc428d533d815178ff494eba85fa28797ca7995e",
+                "reference": "fc428d533d815178ff494eba85fa28797ca7995e",
+                "shasum": ""
+            },
+            "require": {
+                "php": "^8.1"
+            },
+            "require-dev": {
+                "larastan/larastan": "^2.4",
+                "orchestra/testbench": "^8.0",
+                "pestphp/pest": "^2.0",
+                "pestphp/pest-plugin-laravel": "^2.0"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "ArchTech\\Enums\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Samuel Štancl",
+                    "email": "samuel@archte.ch"
+                }
+            ],
+            "description": "Helpers for making PHP enums more lovable.",
+            "support": {
+                "issues": "https://github.com/archtechx/enums/issues",
+                "source": "https://github.com/archtechx/enums/tree/v1.0.0"
+            },
+            "time": "2024-01-12T22:24:43+00:00"
         },
         {
             "name": "brick/math",

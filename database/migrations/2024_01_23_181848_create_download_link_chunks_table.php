@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('download_link_chunks', function (Blueprint $table) {
             $table->id();
+            $table->boolean('started')->default(false);
             $table->boolean('completed')->default(false);
             $table->unsignedBigInteger('size');
             $table->unsignedBigInteger('start_byte');
             $table->unsignedBigInteger('end_byte');
+            $table->unsignedBigInteger('download_time')->nullable(); // Time in milliseconds
             $table->foreignId('download_link_id')->constrained();
             $table->timestamps();
         });

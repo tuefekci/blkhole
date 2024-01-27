@@ -122,13 +122,12 @@ class Alldebrid implements DebridServiceInterface
 	}
 
 	public function getStatus($id=null) {
-		dump($id);
 		try {
 			if (empty($id)) {
 				$response = $this->alldebrid->magnetStatus();
 			} else {
 				$response = $this->alldebrid->magnetStatus($id);
-				
+
 				if (empty($response['id']) || (string) $response['id'] !== (string) $id) {
 					$response = [];
 				} else {

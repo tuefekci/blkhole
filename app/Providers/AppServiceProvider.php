@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\BlackholeManager;
 use App\Services\DownloadManager;
+use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -35,5 +36,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Lang::handleMissingKeysUsing(function (string $key, array $replacements, string $locale) {
+            //info("Missing translation key [$key] detected.");
+     
+            // TODO: Add handling for missing translation keys!
+            return $key;
+        });
+
     }
 }

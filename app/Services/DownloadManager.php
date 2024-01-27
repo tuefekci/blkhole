@@ -5,7 +5,8 @@ namespace App\Services;
 use App\Models\Download;
 use App\Models\DownloadLink;
 use App\Models\DownloadLinkFile;
-use Error;
+use App\Enums\DownloadStatus;
+use App\Jobs\ProcessDownload;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -13,15 +14,6 @@ use Illuminate\Support\Facades\Storage;
 class DownloadManager
 {
 	private string $pathWeb;
-
-	private array $statuses  = [
-		'Pending',
-		'Download Cloud',
-		'Download Local',
-		'Processing',
-		'Completed',
-		'Cancelled'
-	];
 
 	public function __construct()
 	{
@@ -45,21 +37,6 @@ class DownloadManager
 	// Helpers
 	// ====================================================================================
 	// TODO: Move to a global helper class ?
-
-    public function getStatusAsString(int $index): ?string {
-        return $this->statuses[$index] ?? null;
-    }
-
-    public function getStatusAsInt(string $status): ?int {
-        $index = array_search($status, $this->statuses);
-        return ($index !== false) ? $index : null;
-    }
-
-	public function getStatusCancelled(): ?int {
-		// Return the last status
-		return count($this->statuses) - 1;
-	}
-
 	public function isValidExtension($file): string {
 		// Define the valid file extensions
 		$validExtensions = ['ddl', 'torrent', 'magnet'];
@@ -71,13 +48,22 @@ class DownloadManager
 		return in_array($extension, $validExtensions);
 	}
 
+	public function getStatusAsString($status) {
+		$statuses = array_flip(DownloadStatus::options());
+		return $statuses[$status];
+	}
 
 	// ====================================================================================
 	// Logic
 	// ====================================================================================
 
+    public function getActiveDownloads() {
+        // Query downloads with active status
+        return Download::where('status', DownloadStatus::DOWNLOAD_LOCAL);
+    }
+
 	private function getDownloadByPath($srcPath) {
-		return Download::where('src_path', $srcPath);
+		return Download::where('src_path', $srcPath)->first();
 	}
 
 	public function pauseDownload($id): void {
@@ -115,13 +101,16 @@ class DownloadManager
 	
 					// Check if the download already exists
 					if ($this->getDownloadByPath($file)->exists()) {
-						$download = $this->getDownloadByPath($file)->first();
+						$download = $this->getDownloadByPath($file);
+
+						if($download->status !== DownloadStatus::CANCELLED) {
+							continue;
+						}
 					} else {
 						$download = new Download();
 					}
 
 					$download->name = $fileName;
-					$download->status = 1;
 					$download->src_path = $file;
 					$download->src_type = $fileType;
 
@@ -135,14 +124,18 @@ class DownloadManager
 						$download->debrid_provider = $debrid->getProviderName();
 						$download->debrid_id = $debridResponse['id'];
 						$download->debrid_status = $fileType." ".__('add success');
+
+						$download->status = DownloadStatus::DOWNLOAD_CLOUD;
 						$download->save();
 					} catch (\Throwable $th) {
 						Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
 
-						$download->status = $this->getStatusCancelled();
+						$download->status = DownloadStatus::CANCELLED;
 						$download->debrid_id = 0;
 						$download->debrid_provider = $debrid->getProviderName();
 						$download->debrid_status = $th->getMessage();
+
+						$download->status = DownloadStatus::CANCELLED;
 						$download->save();
 					}
 
@@ -161,7 +154,7 @@ class DownloadManager
 		$debrid = DebridServiceFactory::createDebridService();
 
 		// Retrieve all downloads from the database
-		$downloads = Download::where('status', '!=', $this->getStatusCancelled())->get();
+		$downloads = Download::where('status', '!=', DownloadStatus::CANCELLED)->get();
 
 		// Loop through each download
 		foreach ($downloads as $download) {
@@ -179,22 +172,22 @@ class DownloadManager
 				// Todo: Figure out how to handle failed magnets, probably should be a job with long wait times so we have a chance to get temporary unavailable stuff.
 				Log::error("pollDownloads->downloadDebridStatus result is empty!?");
 				$download->debrid_status = "Empty Debrid Status Response?";
-				$download->status = $this->getStatusCancelled();
+				$download->status = DownloadStatus::CANCELLED;
 				$download->save();
 				continue;
 			}
 
+			$download->debrid_status = $downloadDebridStatus['debridStatusMessage'];
+
 			try {
 				if($downloadDebridStatus['status'] === "error") {
-					$download->status = $this->getStatusCancelled();
+					$download->status = DownloadStatus::CANCELLED;
 				} elseif($downloadDebridStatus['status'] === "processing") {
-					$download->status = 1;
+					$download->status = DownloadStatus::DOWNLOAD_CLOUD;
 				} elseif($downloadDebridStatus['status'] === "ready") {
+					$download->status = DownloadStatus::DOWNLOAD_PENDING;
 
-					$download->status = 2;
-					dump($downloadDebridStatus);
 					foreach ($downloadDebridStatus['links'] as $link) {
-						dump($link);
 
 						if(DownloadLink::where('link', $link['link'])->exists()) {
 							continue;
@@ -206,9 +199,6 @@ class DownloadManager
 							'link' => $link['link'],
 						]);
 
-						// Save the download_link
-						//$downloadLink->save();
-
 						// Associate the download_link with the parent download
 						$download->links()->save($downloadLink);
 
@@ -219,24 +209,26 @@ class DownloadManager
 								'size' => $fileData['s'],
 							]);
 
-							// Save the file
-							//$file->save();
-
 							// Associate the file with the download link
 							$downloadLink->files()->save($file);
 						}
 					}
-	
 				}
-	
-				$download->debrid_status = $downloadDebridStatus['debridStatusMessage'];
-				$download->save();
 			} catch (\Throwable $th) {
 				Log::error($th->getMessage());
 				//throw $th;
-				dump($th);
-				dump($downloadDebridStatus);
 			}
+
+			try {
+				// Shedule Download Job
+				Log::info("ProcessDownload::dispatch ".$download->id);
+				ProcessDownload::dispatch($download);
+			} catch (\Throwable $th) {
+				Log::error($th->getMessage());
+				//throw $th;
+			}
+
+			$download->save();
 
 
 

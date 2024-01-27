@@ -44,7 +44,6 @@ new class extends Component
 	public function closeDeleteModal() {
 		$this->deleteModal = false;
 	}
-
 }; ?>
 
 
