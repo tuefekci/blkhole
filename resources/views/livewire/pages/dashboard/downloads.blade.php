@@ -76,13 +76,13 @@ new class extends Component
 						@endif
 					</td>
 					<td class="whitespace-nowrap px-6 py-4">{{ __($download->src_type) }}</td>
-					<td class="whitespace-nowrap px-6 py-4">{{ __(app("DownloadManager")->getStatusAsString($download->status)) }}</td>
+					<td class="whitespace-nowrap px-6 py-4" title="{{ __('Debrid Status:') . " " .$download->debrid_status }}">{{ __(app("DownloadManager")->getStatusAsString($download->status)) }}</td>
 					<td class="whitespace-nowrap px-6 py-4">
 						<div class="w-full bg-neutral-200 dark:bg-neutral-600">
 							<div
 								class="bg-primary p-0.5 text-center text-xs font-medium leading-none text-primary-100"
-								style="width: {{ __(app("DownloadManager")->getProgress($download->id)) }}%">
-								{{ __(app("DownloadManager")->getProgress($download->id)) }}%
+								style="width: {{ $download->getProgress() }}%">
+								{{ $download->getProgress() }}%
 							</div>
 						</div>
 					</td>

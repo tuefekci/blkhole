@@ -11,12 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('download_file_chunks', function (Blueprint $table) {
+        Schema::create('download_link_files', function (Blueprint $table) {
             $table->id();
-            $table->boolean('completed')->default(false);
-            $table->unsignedBigInteger('start_byte');
-            $table->unsignedBigInteger('end_byte');
-            $table->foreignId('download_file_id')->constrained();
+            $table->string('name');
+            $table->unsignedBigInteger('size');
+            $table->foreignId('download_link_id')->constrained();
             $table->timestamps();
         });
     }
@@ -26,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('download_file_chunks');
+        Schema::dropIfExists('download_link_files');
     }
 };

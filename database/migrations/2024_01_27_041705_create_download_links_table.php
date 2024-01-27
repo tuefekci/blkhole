@@ -11,10 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('download_files', function (Blueprint $table) {
+        Schema::create('download_links', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->text('tmp_path')->unique();
+            $table->string('filename');
+            $table->string('link')->unique();
             $table->foreignId('download_id')->constrained();
             $table->timestamps();
         });
@@ -25,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('download_files');
+        Schema::dropIfExists('download_links');
     }
 };

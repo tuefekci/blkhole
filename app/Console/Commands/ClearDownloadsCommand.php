@@ -3,8 +3,9 @@
 namespace App\Console\Commands;
 
 use App\Models\Download;
-use App\Models\DownloadFile;
-use App\Models\DownloadFileChunk;
+use App\Models\DownloadLink;
+use App\Models\DownloadLinkFile;
+use App\Models\DownloadLinkChunk;
 use Illuminate\Console\Command;
 
 class ClearDownloadsCommand extends Command
@@ -28,20 +29,26 @@ class ClearDownloadsCommand extends Command
      */
     public function handle()
     {
+
+        // Clear DownloadLinkFile models
+        $this->info('Clearing DownloadLinkFile models...');
+        DownloadLinkFile::truncate();
+        $this->info('DownloadLinkFile models cleared.');
+
+        // Clear DownloadLinkChunk models
+        $this->info('Clearing DownloadLinkChunk models...');
+        DownloadLinkChunk::truncate();
+        $this->info('DownloadLinkChunk models cleared.');
+
+        // Clear DownloadLink models
+        $this->info('Clearing DownloadLink models...');
+        DownloadLink::truncate();
+        $this->info('DownloadLink models cleared.');
+
         // Clear Download models
         $this->info('Clearing Download models...');
         Download::truncate();
         $this->info('Download models cleared.');
-
-        // Clear DownloadFile models
-        $this->info('Clearing DownloadFile models...');
-        DownloadFile::truncate();
-        $this->info('DownloadFile models cleared.');
-
-        // Clear DownloadChunk models
-        $this->info('Clearing DownloadChunk models...');
-        DownloadFileChunk::truncate();
-        $this->info('DownloadChunk models cleared.');
 
         $this->info('Downloads cleared successfully.');
     }

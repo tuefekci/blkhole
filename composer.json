@@ -4,7 +4,7 @@
     "description": "",
     "keywords": ["laravel", "framework", "debrid", "blackhole"],
     "license": "MIT",
-    "version": "0.0.1",
+    "version": "1.0.0",
     "require": {
         "php": "^8.1",
         "alldebrid/alldebrid-php": "^1.0",

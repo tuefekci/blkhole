@@ -99,24 +99,74 @@ class Alldebrid implements DebridServiceInterface
 		return false;
 	}
 
-	public function getStatus($id=null) {
+	private function getTypeFromStatusCode($statusCode) {
+		switch ($statusCode) {
+			case 0:
+			case 1:
+			case 2:
+			case 3:
+				return 'processing';
+			case 4:
+				return 'ready';
+			case 5:
+			case 6:
+			case 7:
+			case 8:
+			case 9:
+			case 10:
+			case 11:
+				return 'error';
+			default:
+				return 'error';
+		}
+	}
 
+	public function getStatus($id=null) {
+		dump($id);
 		try {
-			if(!$id) {
+			if (empty($id)) {
 				$response = $this->alldebrid->magnetStatus();
 			} else {
 				$response = $this->alldebrid->magnetStatus($id);
+				
+				if (empty($response['id']) || (string) $response['id'] !== (string) $id) {
+					$response = [];
+				} else {
+					$response = [$response];
+				}
 			}
 
-			//$magnetID = $response[0]['id']
+			$return = [];
+			foreach ($response as $item) {
+				try {
+					$return[] = [
+						"id" => $item['id'],
+						"name" => $item['filename'],
+						"size" => $item['size'],
+						"hash" => $item['hash'],
+						"debridStatusMessage" => $item['status'],
+						"debridStatusCode" => $item['statusCode'],
+						"status" => $this->getTypeFromStatusCode($item['statusCode']),
+	
+						"links" => $item['links']
+					];
+				} catch (\Throwable $th) {
+					Log::error("alldebrid->getStatus response loop error: " . $th->getMessage());
+				}
+			}
+
+			if(!empty($id) && !empty($return)) {
+				return $return[0];
+			}
+
+			return $return;
 
 		} catch (\Throwable $th) {
 			//throw $th;
 			Log::error("alldebrid->getStatus: " . $th->getMessage());
-			throw $th;
 		}
 
-		return false;
+		return [];
 	}
 
 	public function getUserStatus() {

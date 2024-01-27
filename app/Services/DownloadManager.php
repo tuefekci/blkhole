@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Download;
+use App\Models\DownloadLink;
+use App\Models\DownloadLinkFile;
 use Error;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Facades\Log;
@@ -14,7 +16,6 @@ class DownloadManager
 
 	private array $statuses  = [
 		'Pending',
-		'In Progress',
 		'Download Cloud',
 		'Download Local',
 		'Processing',
@@ -45,18 +46,21 @@ class DownloadManager
 	// ====================================================================================
 	// TODO: Move to a global helper class ?
 
-    public function getStatusAsString(int $index): ?string
-    {
+    public function getStatusAsString(int $index): ?string {
         return $this->statuses[$index] ?? null;
     }
 
-    public function getStatusAsInt(string $status): ?int
-    {
+    public function getStatusAsInt(string $status): ?int {
         $index = array_search($status, $this->statuses);
         return ($index !== false) ? $index : null;
     }
 
-	public function isValidExtension($file) {
+	public function getStatusCancelled(): ?int {
+		// Return the last status
+		return count($this->statuses) - 1;
+	}
+
+	public function isValidExtension($file): string {
 		// Define the valid file extensions
 		$validExtensions = ['ddl', 'torrent', 'magnet'];
 
@@ -72,38 +76,17 @@ class DownloadManager
 	// Logic
 	// ====================================================================================
 
-    public function getProgress($downloadId)
-    {
-        $download = Download::with('files.chunks')->find($downloadId);
+	private function getDownloadByPath($srcPath) {
+		return Download::where('src_path', $srcPath);
+	}
 
-        if (!$download) {
-            Log::error('Download not found');
-        }
-
-        $totalChunks = $download->files->flatMap(function ($file) {
-            return $file->chunks ?? [];
-        })->count();
-
-        $completedChunks = $download->files->flatMap(function ($file) {
-            return $file->chunks->where('completed', true) ?? [];
-        })->count();
-
-        if ($totalChunks === 0) {
-            return 0; // Avoid division by zero
-        }
-
-        $progressPercentage = ($completedChunks / $totalChunks) * 100;
-
-        return $progressPercentage;
-    }
-
-	public function pauseDownload($id) {
+	public function pauseDownload($id): void {
 		$download = Download::findOrFail($id);
 		$download->paused = !$download->paused;
 		$download->save();
 	}
 
-	public function deleteDownload($id) {
+	public function deleteDownload($id): void {
 		// Find the Download model instance
 		$download = Download::findOrFail($id);
 
@@ -113,10 +96,11 @@ class DownloadManager
 		$download->delete();
     }
 
-	public function pollBlackhole()
+	public function pollBlackhole(): void
 	{
 		$blackholePath = config('blkhole.paths.blackhole');
 		$files = Storage::allFiles($blackholePath);
+		$debrid = DebridServiceFactory::createDebridService();
 	
 		foreach ($files as $file) {
 			// Check if the file has a valid extension
@@ -130,32 +114,38 @@ class DownloadManager
 					}
 	
 					// Check if the download already exists
-					if (!$this->downloadExists($file, $fileName, $fileType)) {
-						$download = new Download();
-						$download->name = $fileName;
-						$download->status = 0;
-						$download->src_path = $file;
-						$download->src_type = $fileType;
-	
-						try {
-							$debrid = DebridServiceFactory::createDebridService();
-							$debridResponse = $debrid->add($fileType, Storage::get($file));
-	
-							if(!empty($debridResponse['name'])) {
-								$download->name = $debridResponse['name'];
-							}
-
-							$download->debrid_provider = $debrid->getProviderName();
-							$download->debrid_id = $debridResponse['id'];
-							$download->debrid_status = $debridResponse['ready'];
-	
-							$download->save();
-						} catch (\Throwable $th) {
-							Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
-						}
+					if ($this->getDownloadByPath($file)->exists()) {
+						$download = $this->getDownloadByPath($file)->first();
 					} else {
-						Log::debug("Download already exists for: " . $file);
+						$download = new Download();
 					}
+
+					$download->name = $fileName;
+					$download->status = 1;
+					$download->src_path = $file;
+					$download->src_type = $fileType;
+
+					try {
+						$debridResponse = $debrid->add($fileType, Storage::get($file));
+
+						if(!empty($debridResponse['name'])) {
+							$download->name = $debridResponse['name'];
+						}
+
+						$download->debrid_provider = $debrid->getProviderName();
+						$download->debrid_id = $debridResponse['id'];
+						$download->debrid_status = $fileType." ".__('add success');
+						$download->save();
+					} catch (\Throwable $th) {
+						Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
+
+						$download->status = $this->getStatusCancelled();
+						$download->debrid_id = 0;
+						$download->debrid_provider = $debrid->getProviderName();
+						$download->debrid_status = $th->getMessage();
+						$download->save();
+					}
+
 				} catch (\Throwable $th) {
 					Log::error("pollBlackhole creating new Download failed for " . $file . " with error: " . $th->getMessage());
 				}
@@ -164,15 +154,92 @@ class DownloadManager
 			}
 		}
 	}
-	
-	private function downloadExists($srcPath, $name, $srcType)
-	{
-		return Download::where('src_path', $srcPath)
-			->where('src_type', $srcType)
-			->exists();
-	}
 
 	public function pollDownloads() {
 
+		// Instantiate Debrid Service
+		$debrid = DebridServiceFactory::createDebridService();
+
+		// Retrieve all downloads from the database
+		$downloads = Download::where('status', '!=', $this->getStatusCancelled())->get();
+
+		// Loop through each download
+		foreach ($downloads as $download) {
+			
+			// TODO: This can be removed because the where condition should already capture cancelled downloads.
+			if(empty($download->debrid_id)) {
+				continue;
+			}
+
+			$downloadDebridStatus = $debrid->getStatus($download->debrid_id);
+
+			if(empty($downloadDebridStatus)) {
+				// This should in theory only happen with the api test inputs but perhaps as well with removed magnets?
+				// Todo: If this also happens when magnets are timeout perhaps send them back to blackhole polling or just reset the debrid ids and add them again here???
+				// Todo: Figure out how to handle failed magnets, probably should be a job with long wait times so we have a chance to get temporary unavailable stuff.
+				Log::error("pollDownloads->downloadDebridStatus result is empty!?");
+				$download->debrid_status = "Empty Debrid Status Response?";
+				$download->status = $this->getStatusCancelled();
+				$download->save();
+				continue;
+			}
+
+			try {
+				if($downloadDebridStatus['status'] === "error") {
+					$download->status = $this->getStatusCancelled();
+				} elseif($downloadDebridStatus['status'] === "processing") {
+					$download->status = 1;
+				} elseif($downloadDebridStatus['status'] === "ready") {
+
+					$download->status = 2;
+					dump($downloadDebridStatus);
+					foreach ($downloadDebridStatus['links'] as $link) {
+						dump($link);
+
+						if(DownloadLink::where('link', $link['link'])->exists()) {
+							continue;
+						}
+
+						// Create a new download_link instance
+						$downloadLink = new DownloadLink([
+							'filename' => $link['filename'],
+							'link' => $link['link'],
+						]);
+
+						// Save the download_link
+						//$downloadLink->save();
+
+						// Associate the download_link with the parent download
+						$download->links()->save($downloadLink);
+
+						// Create and associate files with the download link
+						foreach ($link['files'] as $fileData) {
+							$file = new DownloadLinkFile([
+								'name' => $fileData['n'],
+								'size' => $fileData['s'],
+							]);
+
+							// Save the file
+							//$file->save();
+
+							// Associate the file with the download link
+							$downloadLink->files()->save($file);
+						}
+					}
+	
+				}
+	
+				$download->debrid_status = $downloadDebridStatus['debridStatusMessage'];
+				$download->save();
+			} catch (\Throwable $th) {
+				Log::error($th->getMessage());
+				//throw $th;
+				dump($th);
+				dump($downloadDebridStatus);
+			}
+
+
+
+		}
 	}
 }
