@@ -15,10 +15,12 @@ return new class extends Migration
             $table->id();
             $table->boolean('started')->default(false);
             $table->boolean('completed')->default(false);
+            $table->unsignedBigInteger('index');
             $table->unsignedBigInteger('size');
             $table->unsignedBigInteger('start_byte');
             $table->unsignedBigInteger('end_byte');
             $table->unsignedBigInteger('download_time')->nullable(); // Time in milliseconds
+            $table->unsignedBigInteger('download_speed')->nullable(); // Time in milliseconds
             $table->foreignId('download_link_id')->constrained();
             $table->timestamps();
         });

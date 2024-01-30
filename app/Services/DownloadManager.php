@@ -63,7 +63,15 @@ class DownloadManager
     }
 
 	private function getDownloadByPath($srcPath) {
-		return Download::where('src_path', $srcPath)->first();
+		return Download::where('src_path', $srcPath);
+	}
+
+	public function isPaused($id): bool {
+		// Find the Download instance with the given ID
+		$download = Download::findOrFail($id);
+	
+		// Return whether the download is paused or not
+		return (bool) $download->paused;
 	}
 
 	public function pauseDownload($id): void {
@@ -81,6 +89,10 @@ class DownloadManager
 		// Delete the Download model instance
 		$download->delete();
     }
+
+	public function saveDownloadPart($downloadId, $linkId,  $index, $data) {
+		Log::debug("saveDownloadPart: " . $downloadId . " - " . $linkId . " - " . $index . " ");
+	}
 
 	public function pollBlackhole(): void
 	{
@@ -101,9 +113,9 @@ class DownloadManager
 	
 					// Check if the download already exists
 					if ($this->getDownloadByPath($file)->exists()) {
-						$download = $this->getDownloadByPath($file);
+						$download = $this->getDownloadByPath($file)->first();
 
-						if($download->status !== DownloadStatus::CANCELLED) {
+						if($download->status !== DownloadStatus::CANCELLED()) {
 							continue;
 						}
 					} else {

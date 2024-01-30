@@ -15,7 +15,9 @@ class Kernel extends ConsoleKernel
         // $schedule->command('inspire')->hourly();
         $schedule->command('poll:blackhole')->everyFiveSeconds();
         $schedule->command('log:clear')->daily();
-        $schedule->command('queue:flush')->weekly();
+        $schedule->command('queue:flush')->hourly();
+        $schedule->command('cache:clear')->daily();
+        $schedule->command('telescope:clear')->daily();
     }
 
     /**

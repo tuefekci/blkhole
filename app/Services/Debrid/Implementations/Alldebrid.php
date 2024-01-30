@@ -137,6 +137,15 @@ class Alldebrid implements DebridServiceInterface
 
 			$return = [];
 			foreach ($response as $item) {
+
+				$links = [];
+
+				foreach ($item['links'] as $link) {
+					$unlockedLink = $this->alldebrid->linkUnlock($link['link']);
+					$link['link'] = $unlockedLink['link'];
+					$links[] = $link;
+				}
+
 				try {
 					$return[] = [
 						"id" => $item['id'],
@@ -147,7 +156,7 @@ class Alldebrid implements DebridServiceInterface
 						"debridStatusCode" => $item['statusCode'],
 						"status" => $this->getTypeFromStatusCode($item['statusCode']),
 	
-						"links" => $item['links']
+						"links" => $links
 					];
 				} catch (\Throwable $th) {
 					Log::error("alldebrid->getStatus response loop error: " . $th->getMessage());
