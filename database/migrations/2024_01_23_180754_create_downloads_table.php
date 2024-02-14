@@ -20,8 +20,8 @@ return new class extends Migration
             $table->text('src_path')->unique();
             $table->string('src_type');
 
-            $table->text('dst_path')->unique()->nullable();
-            $table->text('tmp_path')->unique()->nullable();
+            //$table->text('dst_path')->unique()->nullable();
+            //$table->text('tmp_path')->unique()->nullable();
           
             $table->string('debrid_provider')->nullable();
             $table->string('debrid_id')->nullable();

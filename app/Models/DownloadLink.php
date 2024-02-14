@@ -22,8 +22,7 @@ class DownloadLink extends Model
         return $this->hasMany(DownloadLinkFile::class);
     }
 
-    public function chunks(): HasMany
-    {
-        return $this->hasMany(DownloadLinkChunk::class);
+    public function getProgress(): int {
+        return 0;
     }
 }

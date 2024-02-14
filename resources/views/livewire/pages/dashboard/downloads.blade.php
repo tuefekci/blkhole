@@ -19,7 +19,7 @@ new class extends Component
     }
 
 	public function refreshDownloads() {
-		$this->downloads = Download::latest('updated_at')->take(20)->get();
+		$this->downloads = Download::latest('updated_at')->take(10)->get();
 	}
 
 	public function pauseDownload($id) {
@@ -50,33 +50,28 @@ new class extends Component
 
 <div class="flex flex-col">
   <div class="overflow-x-auto sm:-mx-6 lg:-mx-8">
-    <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8">
-      <div class="overflow-hidden">
-        <table class="min-w-full text-center text-sm font-light text-gray-900 dark:text-gray-100" wire:poll.visible="refreshDownloads">
-          <thead class="border-b bg-neutral-800 font-medium dark:border-gray-700 dark:bg-gray-900 text-left">
-            <tr>
-              <th scope="col" class=" px-6 py-4">Name</th>
-              <th scope="col" class=" px-6 py-4">Type</th>
-			  <th scope="col" class=" px-6 py-4">Status</th>
-			  <th scope="col" class=" px-6 py-4">Progress</th>
-			  <th scope="col" class=" px-6 py-4">Last Update</th>
-              <th scope="col" class=" px-6 py-4 hidden md:block">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
+    <div class="inline-block min-w-full py-2 sm:px-6 lg:px-8 text-gray-900 dark:text-gray-100">
 
 		  	@foreach($downloads as $download)
-				<tr class="border-b dark:border-gray-700 text-left">
-					<td class="whitespace-nowrap px-6 py-4 font-medium truncate" title="{{ $download->name }}">
-						@if(strlen($download->name) > 32)
-							{{ substr($download->name, 0, 32) }}...
-						@else
-							{{ $download->name }}
-						@endif
-					</td>
-					<td class="whitespace-nowrap px-6 py-4">{{ __($download->src_type) }}</td>
-					<td class="whitespace-nowrap px-6 py-4" title="{{ __('Debrid Status:') . " " .$download->debrid_status }}">{{ __(app("DownloadManager")->getStatusAsString($download->status)) }}</td>
-					<td class="whitespace-nowrap px-6 py-4">
+				<div class="w-full flex flex-row border-b dark:border-gray-700">
+
+
+					<div class="whitespace-nowrap px-0 py-2 basis-full pr-4">
+
+						<div class="w-full grid grid-cols-2 gap-1 pb-1">
+							<div class="w-full ">
+								@if(strlen($download->name) > 48)
+									{{ substr($download->name, 0, 48) }}...
+								@else
+									{{ $download->name }}
+								@endif
+							</div>
+							<div class="w-full text-right" title="{{ __('Debrid Status:') . " " .$download->debrid_status }}">
+								{{ __(app("DownloadManager")->getStatusAsString($download->status)) }}
+							</div>
+						</div>
+
+
 						<div class="w-full bg-neutral-200 dark:bg-neutral-600">
 							<div
 								class="bg-primary p-0.5 text-center text-xs font-medium leading-none text-primary-100"
@@ -84,16 +79,22 @@ new class extends Component
 								{{ $download->getProgress() }}%
 							</div>
 						</div>
-					</td>
-					<td class="whitespace-nowrap px-6 py-4">{{ $download->updated_at }}</td>
-					<td class="whitespace-nowrap px-6 py-4 w-32 hidden md:block">
-						<div class="grid grid-cols-3 gap-2">
+
+
+						<div class="w-full grid grid-cols-2 gap-1 text-xs pt-1">
+							<div class="w-full">{{ __($download->src_type) }}</div>
+							<div class="w-full text-right">0 MB / 0 MB</div>
+						</div>
+					</div>
+
+					<div class="whitespace-nowrap py-2 basis-24 flex justify-center">
+						<div class="grid grid-cols-3 gap-1">
             
-							<a href="/downloads/{{ $download->id }}" wire:navigate>
+							<button href="/downloads/{{ $download->id }}" wire:navigate>
 								<svg width="24px" height="24px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="fill-gray-500 dark:fill-gray-400 hover:fill-gray-700 dark:hover:fill-gray-300 cursor-pointer">
 									<path fill-rule="evenodd" clip-rule="evenodd" d="M22 12C22 17.5228 17.5228 22 12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12ZM12 17.75C12.4142 17.75 12.75 17.4142 12.75 17V11C12.75 10.5858 12.4142 10.25 12 10.25C11.5858 10.25 11.25 10.5858 11.25 11V17C11.25 17.4142 11.5858 17.75 12 17.75ZM12 7C12.5523 7 13 7.44772 13 8C13 8.55228 12.5523 9 12 9C11.4477 9 11 8.55228 11 8C11 7.44772 11.4477 7 12 7Z"/>
 								</svg>
-							</a>
+							</button>
 
 							<button type="button" wire:click="pauseDownload({{ $download->id }})" title="{{ $download->paused ? __('Continue Download') : __('Pause Download') }}"> 
 								@if($download->paused)
@@ -135,13 +136,10 @@ new class extends Component
 							</button>
 						</div>
 
-					</td>
-				</tr>
+					</div>
+				</div>
 			@endforeach
 
-          </tbody>
-        </table>
-      </div>
     </div>
   </div>
 </div>

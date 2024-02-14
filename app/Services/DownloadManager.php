@@ -7,6 +7,7 @@ use App\Models\DownloadLink;
 use App\Models\DownloadLinkFile;
 use App\Enums\DownloadStatus;
 use App\Jobs\ProcessDownload;
+use App\Models\Setting;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -22,7 +23,7 @@ class DownloadManager
 			Storage::makeDirectory( config('blkhole.paths.downloads') );
 	
 			// Set paths for blackhole and downloads web interfaces
-			$this->pathWeb = config('blkhole.paths.downloads') . DIRECTORY_SEPARATOR . "webinterface" . DIRECTORY_SEPARATOR;
+			$this->pathWeb = config('blkhole.paths.downloads') . DIRECTORY_SEPARATOR . "web" . DIRECTORY_SEPARATOR;
 	
 			// Ensure the existence of specific directories
 			Storage::makeDirectory($this->pathWeb);
@@ -36,129 +37,18 @@ class DownloadManager
 	// ====================================================================================
 	// Helpers
 	// ====================================================================================
-	// TODO: Move to a global helper class ?
-	public function isValidExtension($file): string {
-		// Define the valid file extensions
-		$validExtensions = ['ddl', 'torrent', 'magnet'];
-
-		// Get the extension of the file
-		$extension = pathinfo($file, PATHINFO_EXTENSION);
-
-		// Check if the extension is valid
-		return in_array($extension, $validExtensions);
-	}
-
 	public function getStatusAsString($status) {
 		$statuses = array_flip(DownloadStatus::options());
 		return $statuses[$status];
 	}
 
+
 	// ====================================================================================
 	// Logic
 	// ====================================================================================
 
-    public function getActiveDownloads() {
-        // Query downloads with active status
-        return Download::where('status', DownloadStatus::DOWNLOAD_LOCAL);
-    }
 
-	private function getDownloadByPath($srcPath) {
-		return Download::where('src_path', $srcPath);
-	}
 
-	public function isPaused($id): bool {
-		// Find the Download instance with the given ID
-		$download = Download::findOrFail($id);
-	
-		// Return whether the download is paused or not
-		return (bool) $download->paused;
-	}
-
-	public function pauseDownload($id): void {
-		$download = Download::findOrFail($id);
-		$download->paused = !$download->paused;
-		$download->save();
-	}
-
-	public function deleteDownload($id): void {
-		// Find the Download model instance
-		$download = Download::findOrFail($id);
-
-		Storage::delete($download->src_path);
-
-		// Delete the Download model instance
-		$download->delete();
-    }
-
-	public function saveDownloadPart($downloadId, $linkId,  $index, $data) {
-		Log::debug("saveDownloadPart: " . $downloadId . " - " . $linkId . " - " . $index . " ");
-	}
-
-	public function pollBlackhole(): void
-	{
-		$blackholePath = config('blkhole.paths.blackhole');
-		$files = Storage::allFiles($blackholePath);
-		$debrid = DebridServiceFactory::createDebridService();
-	
-		foreach ($files as $file) {
-			// Check if the file has a valid extension
-			if ($this->isValidExtension($file)) {
-				try {
-					$fileName = pathinfo($file, PATHINFO_FILENAME);
-					$fileType = pathinfo($file, PATHINFO_EXTENSION);
-	
-					if ($fileType === "ddl") {
-						$fileName = base64_decode($fileName);
-					}
-	
-					// Check if the download already exists
-					if ($this->getDownloadByPath($file)->exists()) {
-						$download = $this->getDownloadByPath($file)->first();
-
-						if($download->status !== DownloadStatus::CANCELLED()) {
-							continue;
-						}
-					} else {
-						$download = new Download();
-					}
-
-					$download->name = $fileName;
-					$download->src_path = $file;
-					$download->src_type = $fileType;
-
-					try {
-						$debridResponse = $debrid->add($fileType, Storage::get($file));
-
-						if(!empty($debridResponse['name'])) {
-							$download->name = $debridResponse['name'];
-						}
-
-						$download->debrid_provider = $debrid->getProviderName();
-						$download->debrid_id = $debridResponse['id'];
-						$download->debrid_status = $fileType." ".__('add success');
-
-						$download->status = DownloadStatus::DOWNLOAD_CLOUD;
-						$download->save();
-					} catch (\Throwable $th) {
-						Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
-
-						$download->status = DownloadStatus::CANCELLED;
-						$download->debrid_id = 0;
-						$download->debrid_provider = $debrid->getProviderName();
-						$download->debrid_status = $th->getMessage();
-
-						$download->status = DownloadStatus::CANCELLED;
-						$download->save();
-					}
-
-				} catch (\Throwable $th) {
-					Log::error("pollBlackhole creating new Download failed for " . $file . " with error: " . $th->getMessage());
-				}
-			} else {
-				Log::error("isValidExtension failed for: " . $file);
-			}
-		}
-	}
 
 	public function pollDownloads() {
 
@@ -225,6 +115,9 @@ class DownloadManager
 							$downloadLink->files()->save($file);
 						}
 					}
+
+
+
 				}
 			} catch (\Throwable $th) {
 				Log::error($th->getMessage());
@@ -232,7 +125,7 @@ class DownloadManager
 			}
 
 			try {
-				// Shedule Download Job
+				// Schedule Download Job
 				Log::info("ProcessDownload::dispatch ".$download->id);
 				ProcessDownload::dispatch($download);
 			} catch (\Throwable $th) {

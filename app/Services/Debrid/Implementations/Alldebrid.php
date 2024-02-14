@@ -78,7 +78,7 @@ class Alldebrid implements DebridServiceInterface
 				"id" => $result['id']
 			];
 		} catch (\Throwable $th) {
-			Log::error("alldebrid->addddl: " . $th->getMessage());
+			Log::error("alldebrid->addDDL: " . $th->getMessage());
 			throw $th;
 		}
     }

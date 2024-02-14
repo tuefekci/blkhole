@@ -30,7 +30,7 @@ class PollBlackholeCommand extends Command
         $this->info('Polling blackhole...');
 
         try {
-            app("DownloadManager")->pollBlackhole();
+            app("BlackholedManager")->pollBlackhole();
             $this->info('Polling completed.');
         } catch (\Throwable $th) {
            Log::error("command poll:blackhole error:" . $th->getMessage());

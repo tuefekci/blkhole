@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Helpers\UrlHelper;
+use App\Models\Download;
 use Error;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Facades\Log;
@@ -20,7 +21,7 @@ class BlackholeManager
 			Storage::makeDirectory( config('blkhole.paths.blackhole') );
 	
 			// Set paths for blackhole and downloads web interfaces
-			$this->pathWeb = config('blkhole.paths.blackhole') . DIRECTORY_SEPARATOR . "webinterface" . DIRECTORY_SEPARATOR;
+			$this->pathWeb = config('blkhole.paths.blackhole') . DIRECTORY_SEPARATOR . "web" . DIRECTORY_SEPARATOR;
 	
 			// Ensure the existence of specific directories
 			Storage::makeDirectory($this->pathWeb);
@@ -135,5 +136,80 @@ class BlackholeManager
 		}
 	}
 	
+	public function isValidExtension($file): string {
+		// Define the valid file extensions
+		$validExtensions = ['ddl', 'torrent', 'magnet'];
+
+		// Get the extension of the file
+		$extension = pathinfo($file, PATHINFO_EXTENSION);
+
+		// Check if the extension is valid
+		return in_array($extension, $validExtensions);
+	}
+
+	public function pollBlackhole(): void
+	{
+		$blackholePath = config('blkhole.paths.blackhole');
+		$files = Storage::allFiles($blackholePath);
+		$debrid = DebridServiceFactory::createDebridService();
+	
+		foreach ($files as $file) {
+			// Check if the file has a valid extension
+			if ($this->isValidExtension($file)) {
+				try {
+					$fileName = pathinfo($file, PATHINFO_FILENAME);
+					$fileType = pathinfo($file, PATHINFO_EXTENSION);
+	
+					if ($fileType === "ddl") {
+						$fileName = base64_decode($fileName);
+					}
+	
+					// Check if the download already exists
+					if (Download::getByPath($file)->exists()) {
+						$download = Download::getByPath($file)->first();
+
+						if($download->status !== DownloadStatus::CANCELLED()) {
+							continue;
+						}
+					} else {
+						$download = new Download();
+					}
+
+					$download->name = $fileName;
+					$download->src_path = $file;
+					$download->src_type = $fileType;
+
+					try {
+						$debridResponse = $debrid->add($fileType, Storage::get($file));
+
+						if(!empty($debridResponse['name'])) {
+							$download->name = $debridResponse['name'];
+						}
+
+						$download->debrid_provider = $debrid->getProviderName();
+						$download->debrid_id = $debridResponse['id'];
+						$download->debrid_status = $fileType." ".__('add success');
+
+						$download->status = DownloadStatus::DOWNLOAD_CLOUD;
+						$download->save();
+					} catch (\Throwable $th) {
+						Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
+
+						$download->debrid_id = 0;
+						$download->debrid_provider = $debrid->getProviderName();
+						$download->debrid_status = $th->getMessage();
+
+						$download->status = DownloadStatus::CANCELLED;
+						$download->save();
+					}
+
+				} catch (\Throwable $th) {
+					Log::error("pollBlackhole creating new Download failed for " . $file . " with error: " . $th->getMessage());
+				}
+			} else {
+				Log::error("isValidExtension failed for: " . $file);
+			}
+		}
+	}
 	
 }

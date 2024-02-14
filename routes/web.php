@@ -25,6 +25,8 @@ Route::view('dashboard', 'dashboard')
 Route::view('downloads', 'downloads')->middleware(['auth', 'verified'])->name('downloads');
 Route::view('downloads/{id}', 'download')->middleware(['auth', 'verified'])->name('download');
 
+Route::view('stream', 'stream')->middleware(['auth', 'verified'])->name('stream');
+
 Route::view('profile', 'profile')
     ->middleware(['auth'])
     ->name('profile');

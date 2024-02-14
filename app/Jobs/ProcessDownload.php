@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Jobs\Middleware\DownloadPaused;
 use App\Enums\DownloadStatus;
 use App\Models\DownloadLinkChunk;
 use App\Models\Setting;
@@ -22,8 +23,26 @@ class ProcessDownload implements ShouldQueue, ShouldBeUnique
 
     protected $download;
 
-    public $timeout = 60*60*6;
-    public $tries = 1000*1000;
+    /**
+     * The maximum number of unhandled exceptions to allow before failing.
+     *
+     * @var int
+     */
+    public $maxExceptions = 3;
+
+    /**
+     * The number of seconds the job can run before timing out.
+     *
+     * @var int
+     */
+    public $timeout = 60*60*3;
+
+    /**
+     * Indicate if the job should be marked as failed on timeout.
+     *
+     * @var bool
+     */
+    public $failOnTimeout = true;
 
     /**
      * Create a new job instance.
@@ -39,58 +58,22 @@ class ProcessDownload implements ShouldQueue, ShouldBeUnique
         return $this->download->id;
     }
 
-
     /**
-     * Get Headers
-     *
-     * Gets the headers for the requested download so we can determine how many chunks etc.
+     * Determine the time at which the job should timeout.
      */
-    private function getContentLength($url)
+    public function retryUntil(): DateTime
     {
-        Log::debug("[ProcessDownload] getHeaders " . $this->download->id ." - " . $url);
-
-        try {
-            $response = Http::head($url);
-
-            $statusCode = $response->status();
-            if ($statusCode !== 200) {
-                throw new \Exception("Invalid response code: $statusCode");
-            }
-
-            $contentLength = $response->header('content-length');
-            if (empty($contentLength)) {
-                throw new \Exception("Download getHeaders content-length empty.");
-            }
-
-            return (int) $contentLength;
-        } catch (\Exception $e) {
-            Log::error($e->getMessage(), ['exception' => $e]);
-            throw $e;
-        }
+        return now()->addHours(6);
     }
 
-    public static function createChunksMeta($size)
+    /**
+     * Get the middleware the job should pass through.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
     {
-        // Retrieve chunk size from settings
-        $chunkSize = (int) Setting::get('chunkSize'); // 32MB default
-        $chunkCount = (int) ceil($size / $chunkSize);
-
-        $chunks = [];
-        for ($i = 0; $i < $chunkCount; $i++) {
-            $start = $i * $chunkSize;
-            $end = (($i + 1) * $chunkSize) - 1;
-
-            if ($i == $chunkCount - 1) {
-                $end = $size;
-            }
-
-            $chunks[] = (object) [
-                'start' => $start,
-                'end' => $end
-            ];
-        }
-
-        return $chunks;
+        return [(new DownloadPaused($this->download->id))];
     }
 
     /**
@@ -100,12 +83,6 @@ class ProcessDownload implements ShouldQueue, ShouldBeUnique
     public function handle(): void
     {
         $downloadManager = app('DownloadManager');
-
-        if($downloadManager->isPaused($this->download->id)) {
-            Log::info("Skipping Download " . $this->download->id . " due to pause");
-            $this->release(now()->addSeconds(30));
-            return;
-        }
 
         Log::info("Handle ProcessDownload for Download: " . $this->download->id);
 
@@ -173,59 +150,7 @@ class ProcessDownload implements ShouldQueue, ShouldBeUnique
             // ===============================
             // ====== Download Files
             // ===============================
-
-            $connections = (int) Setting::get('connections');
-            $bandwidth = (int) Setting::get('bandwidth');
-
-
-
-            foreach ($this->download->links as $link) {
-                $chunks = $link->chunks()->where('completed', false)->get();
-                $pairs = $chunks->chunk($connections); // Split chunks into pairs of amount of $connections elements
-
-                foreach ($pairs as $pair) {
-
-                    if($downloadManager->isPaused($this->download->id)) {
-                        Log::info("Skipping Download " . $this->download->id . " due to pause");
-                        $this->release(now()->addSeconds(30));
-                        return;
-                    }
-                    
-                    $responses = Http::pool(function(Pool $pool) use($pair, $link) {
-                        foreach($pair as $key => $chunk) {
-                            $pool->as($key)->withHeaders(['Range' => "bytes={$chunk->start_byte}-{$chunk->end_byte}"])->timeout(60)->get($link->link);
-                        }
-                    });
-
-                    foreach($responses as $key => $response) {
-                        $chunk = $pair[$key];
-
-                        try {
-                            if( $response->status() === 206) {
-                                $stats = $response->handlerStats();
-                                //$downloadManager->saveDownloadPart($this->download->id, $link->id, $chunk->index, $response->body());
-     
-    
-                                $chunk->download_time = $stats['total_time'];
-                                $chunk->download_speed = $stats['speed_download'];
-                                $chunk->completed = true;
-                                $chunk->save();
-    
-                                // TODO: Update Database
-                                Log::debug("Request for Chunk " .  $chunk->id . " with following stats: " . $stats['total_time'] . " | " . $stats['speed_download']);
-                            } else {
-                                Log::error("Request for Chunk " .  $chunk->id . " failed with status " . $response->status());
-                            }
-                        } catch (\Throwable $th) {
-                            //throw $th;
-                            Log::error($th->getMessage());
-                        }
-                    }
-
-                    unset($responses);
-                }
-            }
-
+            $this->downloadLinks();
             // ===============================
             // ===============================
 
@@ -264,4 +189,71 @@ class ProcessDownload implements ShouldQueue, ShouldBeUnique
         $this->download->status = DownloadStatus::DOWNLOAD_PENDING;
         $this->download->save();
     }
+
+    /**
+     * Get Headers
+     *
+     * Gets the headers for the requested download so we can determine how many chunks etc.
+     */
+    private function getContentLength($url)
+    {
+        Log::debug("[ProcessDownload] getHeaders " . $this->download->id ." - " . $url);
+
+        try {
+            $response = Http::head($url);
+
+            $statusCode = $response->status();
+            if ($statusCode !== 200) {
+                throw new \Exception("Invalid response code: $statusCode");
+            }
+
+            $contentLength = $response->header('content-length');
+            if (empty($contentLength)) {
+                throw new \Exception("Download getHeaders content-length empty.");
+            }
+
+            return (int) $contentLength;
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            throw $e;
+        }
+    }
+
+    private function downloadLinks() {
+
+        $connections = (int) Setting::get('connections');
+
+        foreach ($this->download->links as $link) {
+            $chunks = $link->chunks()->where('completed', false)->get();
+            $pairs = $chunks->chunk($connections); // Split chunks into pairs of amount of $connections elements
+            $this->downloadChunks($pairs, $link->link);
+        }
+
+    }
+
+    public static function createChunksMeta($size)
+    {
+        // Retrieve chunk size from settings
+        $chunkSize = (int) Setting::get('chunkSize'); // 32MB default
+        $chunkCount = (int) ceil($size / $chunkSize);
+
+        $chunks = [];
+        for ($i = 0; $i < $chunkCount; $i++) {
+            $start = $i * $chunkSize;
+            $end = (($i + 1) * $chunkSize) - 1;
+
+            if ($i == $chunkCount - 1) {
+                $end = $size;
+            }
+
+            $chunks[] = (object) [
+                'start' => $start,
+                'end' => $end
+            ];
+        }
+
+        return $chunks;
+    }
+
+
 }

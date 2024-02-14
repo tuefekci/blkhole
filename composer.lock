@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "d8c08bb78d547f9d23b9823e60cece34",
+    "content-hash": "850133ac072994539c93d4cbc7799610",
     "packages": [
         {
             "name": "alldebrid/alldebrid-php",
@@ -98,6 +98,66 @@
                 "source": "https://github.com/archtechx/enums/tree/v1.0.0"
             },
             "time": "2024-01-12T22:24:43+00:00"
+        },
+        {
+            "name": "asantibanez/laravel-eloquent-state-machines",
+            "version": "v5.2.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/asantibanez/laravel-eloquent-state-machines.git",
+                "reference": "7de6234f2903d960195b68c6e7468ccfec6c6b60"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/asantibanez/laravel-eloquent-state-machines/zipball/7de6234f2903d960195b68c6e7468ccfec6c6b60",
+                "reference": "7de6234f2903d960195b68c6e7468ccfec6c6b60",
+                "shasum": ""
+            },
+            "require": {
+                "illuminate/support": "^6.0|^7.0|^8.0|^9.0|^10.0",
+                "javoscript/laravel-macroable-models": "^1.0",
+                "php": "^7.3|^7.4|^8.0"
+            },
+            "require-dev": {
+                "laravel/legacy-factories": "^1.0.4",
+                "orchestra/testbench": "^4.0|^5.0|^6.0|^7.0|^8.0",
+                "phpunit/phpunit": "^8.0|^9.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Asantibanez\\LaravelEloquentStateMachines\\LaravelEloquentStateMachinesServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Asantibanez\\LaravelEloquentStateMachines\\": "src"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Andrés Santibáñez",
+                    "email": "santibanez.andres@gmail.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "State machines for your Laravel Eloquent models",
+            "homepage": "https://github.com/asantibanez/laravel-eloquent-state-machines",
+            "keywords": [
+                "asantibanez",
+                "laravel-eloquent-state-machines"
+            ],
+            "support": {
+                "issues": "https://github.com/asantibanez/laravel-eloquent-state-machines/issues",
+                "source": "https://github.com/asantibanez/laravel-eloquent-state-machines/tree/v5.2.0"
+            },
+            "time": "2023-01-31T14:51:16+00:00"
         },
         {
             "name": "brick/math",
@@ -1137,6 +1197,57 @@
                 }
             ],
             "time": "2023-12-03T19:50:20+00:00"
+        },
+        {
+            "name": "javoscript/laravel-macroable-models",
+            "version": "1.0.6",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/javoscript/laravel-macroable-models.git",
+                "reference": "b60da8c1d1c1731ec8851059c767c69d187c8cd7"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/javoscript/laravel-macroable-models/zipball/b60da8c1d1c1731ec8851059c767c69d187c8cd7",
+                "reference": "b60da8c1d1c1731ec8851059c767c69d187c8cd7",
+                "shasum": ""
+            },
+            "require-dev": {
+                "orchestra/testbench": "^8",
+                "phpunit/phpunit": "^10"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "Javoscript\\MacroableModels\\MacroableModelsServiceProvider"
+                    ],
+                    "aliases": {
+                        "MacroableModels": "Javoscript\\MacroableModels\\Facades\\MacroableModels"
+                    }
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Javoscript\\MacroableModels\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Javier Ugarte",
+                    "email": "javougarte@gmail.com"
+                }
+            ],
+            "description": "A package for adding methods to Laravel models on the fly",
+            "support": {
+                "issues": "https://github.com/javoscript/laravel-macroable-models/issues",
+                "source": "https://github.com/javoscript/laravel-macroable-models/tree/1.0.6"
+            },
+            "time": "2023-05-23T15:04:41+00:00"
         },
         {
             "name": "laravel/framework",
@@ -3423,6 +3534,76 @@
                 }
             ],
             "time": "2023-11-08T05:53:05+00:00"
+        },
+        {
+            "name": "softinklab/laravel-keyvalue-storage",
+            "version": "v1.8",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/SoftinkLab/laravel-keyvalue-storage.git",
+                "reference": "8beb98ced05f2b1675eca99e1e465f369d8e05b5"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/SoftinkLab/laravel-keyvalue-storage/zipball/8beb98ced05f2b1675eca99e1e465f369d8e05b5",
+                "reference": "8beb98ced05f2b1675eca99e1e465f369d8e05b5",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=7.2"
+            },
+            "require-dev": {
+                "illuminate/database": "^6.0|^7.0|^8.0|^9.0",
+                "illuminate/support": "^6.0|^7.0|^8.0|^9.0",
+                "orchestra/database": "^4.0|^5.0|^6.0",
+                "orchestra/testbench": "^4.0|^5.0|^6.0"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SoftinkLab\\LaravelKeyvalueStorage\\KeyValueStorageServiceProvider"
+                    ],
+                    "aliases": {
+                        "KVOption": "SoftinkLab\\LaravelKeyvalueStorage\\KeyValueStorageServiceProvider\\Facades\\KVOption"
+                    }
+                }
+            },
+            "autoload": {
+                "files": [
+                    "src/Http/helpers.php"
+                ],
+                "psr-4": {
+                    "SoftinkLab\\LaravelKeyvalueStorage\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "Pasan Bhanu Guruge",
+                    "email": "pasan@softinklab.com",
+                    "homepage": "https://www.softinklab.com",
+                    "role": "Developer"
+                }
+            ],
+            "description": "Key-Value Storage for Laravel using Database or JSON File",
+            "homepage": "https://www.softinklab.com",
+            "keywords": [
+                "json storage",
+                "key value storage",
+                "laravel key value storage",
+                "laravel options",
+                "softink lab"
+            ],
+            "support": {
+                "email": "info@softinklab.com",
+                "issues": "https://github.com/SoftinkLab/laravel-keyvalue-storage/issues",
+                "source": "https://github.com/SoftinkLab/laravel-keyvalue-storage/tree/v1.8"
+            },
+            "time": "2022-03-27T06:08:46+00:00"
         },
         {
             "name": "symfony/console",
