@@ -1,6 +1,7 @@
 <?php
 
     use Illuminate\Support\Facades\File;
+    use Illuminate\Support\Facades\Cache;
 
     // Get the path to the composer.json file
     $composerJsonPath = base_path('composer.json');
@@ -20,8 +21,12 @@
             // Retrieve the version field
             $version = $composerData['version'];
         }
-    }
+    }  
 
+    // Retrieve the Git commit hash and cache it for 60 minutes
+    $commitHash = Cache::remember('git_commit_hash', now()->addMinutes(30), function () {
+        return trim(shell_exec('git rev-parse --short=7 HEAD'));
+    });
 ?>
 
 <!DOCTYPE html>
@@ -59,7 +64,9 @@
             </main>
 
             <div class="min-w-full text-center text-sm font-light text-gray-900 dark:text-gray-100 pt-4">
-                Version: {{$version}} | Github: <a href="https://github.com/tuefekci/blkhole">/tuefekci/blkhole</a>
+                Version: {{$version}} 
+                <a href="https://github.com/tuefekci/blkhole/commit/{{$commitHash}}" target="_blank"><span class="text-xs">({{$commitHash}})</span></a> | 
+                Github: <a target="_blank" href="https://github.com/tuefekci/blkhole">/tuefekci/blkhole</a>
             </div>
         </div>
     </body>

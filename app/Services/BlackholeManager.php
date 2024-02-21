@@ -2,8 +2,11 @@
 
 namespace App\Services;
 
+use App\Enums\DownloadStatus;
 use App\Helpers\UrlHelper;
+use App\Jobs\DownloadJob;
 use App\Models\Download;
+use Carbon\Carbon;
 use Error;
 use Illuminate\Contracts\Cache\Store;
 use Illuminate\Support\Facades\Log;
@@ -155,6 +158,7 @@ class BlackholeManager
 	
 		foreach ($files as $file) {
 			// Check if the file has a valid extension
+
 			if ($this->isValidExtension($file)) {
 				try {
 					$fileName = pathinfo($file, PATHINFO_FILENAME);
@@ -168,46 +172,104 @@ class BlackholeManager
 					if (Download::getByPath($file)->exists()) {
 						$download = Download::getByPath($file)->first();
 
-						if($download->status !== DownloadStatus::CANCELLED()) {
-							continue;
+						if($download->status()->is(DownloadStatus::CANCELLED())) {
+
+							$cancelHistory  = $download->status()->history()->transitionedTo(DownloadStatus::CANCELLED())->get();
+
+							if ($cancelHistory->count() > 50 && Carbon::parse($cancelHistory->last()->created_at)->diffInMinutes(Carbon::now()) < 60*6) {
+								// Check if the cancelCount is greater than 50 and if the last cancellation was less than 60*6 minutes ago
+								// skip so we don´t flood the api
+								continue;
+							} else if ($cancelHistory->count() > 15 && Carbon::parse($cancelHistory->last()->created_at)->diffInMinutes(Carbon::now()) < 60) {
+								// Check if the cancelCount is greater than 15 and if the last cancellation was less than 60 minutes ago
+								// skip so we don´t flood the api
+								continue;
+							} else if ($cancelHistory->count() > 5 && Carbon::parse($cancelHistory->last()->created_at)->diffInMinutes(Carbon::now()) < 15) {
+								// Check if the cancelCount is greater than 5 and if the last cancellation was less than 15 minutes ago
+								// skip so we don´t flood the api
+								continue;
+							} else if (Carbon::parse($cancelHistory->last()->created_at)->diffInMinutes(Carbon::now()) < 2) {
+								// skip so we don´t flood the api
+								continue;
+							} else {
+								// reset to pending
+								$download->status()->transitionTo(DownloadStatus::PENDING(), [
+									'comments' => "[blkhole] " .__('Auto Restart') . " (" . $cancelHistory->count() . ")",
+								]);
+							}
+
+						} else {
+
+							// TODO: There must be a nicer way to handle this? But for the moment i am fed up with sqlite file locks.
+							if(!$download->status()->is(DownloadStatus::COMPLETED()) || !$download->status()->is(DownloadStatus::STREAM())) {
+								if(now()->diffInHours($download->updated_at) > 1) {
+									// reset to pending
+									$download->status()->transitionTo(DownloadStatus::PENDING(), [
+										'comments' => "[blkhole] " .__('Auto Restart') . " (TIMEOUT)",
+									]);
+								}
+							}
+
 						}
 					} else {
 						$download = new Download();
 					}
 
-					$download->name = $fileName;
-					$download->src_path = $file;
-					$download->src_type = $fileType;
 
-					try {
-						$debridResponse = $debrid->add($fileType, Storage::get($file));
+					if($download->status == null || $download->status()->is(DownloadStatus::PENDING())) {
+						try {
+							$download->name = $fileName;
+							$download->src_path = $file;
+							$download->src_type = $fileType;
+							$download->save();	
 
-						if(!empty($debridResponse['name'])) {
-							$download->name = $debridResponse['name'];
+							$debridResponse = $debrid->add($fileType, Storage::get($file));
+
+							if(!empty($debridResponse['name'])) {
+								$download->name = $debridResponse['name'];
+							}
+
+							$download->debrid_provider = $debrid->getProviderName();
+							$download->debrid_id = $debridResponse['id'];
+							$download->save();
+
+
+							$download->status()->transitionTo(DownloadStatus::DOWNLOAD_CLOUD(), [
+								'comments' => "[" . __($debrid->getProviderName()) . '] ' . __($fileType)." ".__('add success'),
+							]);
+
+							$dispatched = DownloadJob::dispatch($download);
+
+							echo "[blkhole] ". __($fileType)." ".__('dispatched'). " ". $file. "\n";
+
+						} catch (\Throwable $th) {
+							Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
+
+							$download->debrid_id = 0;
+							$download->debrid_provider = $debrid->getProviderName();
+
+							$download->status()->transitionTo(DownloadStatus::CANCELLED(), [
+								'comments' => "[" . __($debrid->getProviderName()) . '] '. __($th->getMessage()),
+							]);
+
+							$download->save();
+
+							echo "[blkhole] ". __($fileType)." ".__($th->getMessage()). " ". $file. "\n";
 						}
 
-						$download->debrid_provider = $debrid->getProviderName();
-						$download->debrid_id = $debridResponse['id'];
-						$download->debrid_status = $fileType." ".__('add success');
-
-						$download->status = DownloadStatus::DOWNLOAD_CLOUD;
-						$download->save();
-					} catch (\Throwable $th) {
-						Log::error("pollBlackhole->debrid Error: " . $th->getMessage());
-
-						$download->debrid_id = 0;
-						$download->debrid_provider = $debrid->getProviderName();
-						$download->debrid_status = $th->getMessage();
-
-						$download->status = DownloadStatus::CANCELLED;
-						$download->save();
+					} else {
+						echo "[blkhole] ". __($fileType)." ".__('already dispatched'). " ". $file. "\n";
 					}
+
+
 
 				} catch (\Throwable $th) {
 					Log::error("pollBlackhole creating new Download failed for " . $file . " with error: " . $th->getMessage());
+					echo "[blkhole] ". __("pollBlackhole creating new Download failed for " . $file . " with error: " . $th->getMessage());
 				}
 			} else {
 				Log::error("isValidExtension failed for: " . $file);
+				echo "[blkhole] ". __("isValidExtension failed for: " . $file). "\n";
 			}
 		}
 	}

@@ -7,6 +7,7 @@ use App\Models\DownloadLink;
 use App\Models\DownloadLinkFile;
 use App\Models\DownloadLinkChunk;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\DB;
 
 class ClearDownloadsCommand extends Command
 {
@@ -35,15 +36,12 @@ class ClearDownloadsCommand extends Command
         DownloadLinkFile::truncate();
         $this->info('DownloadLinkFile models cleared.');
 
-        // Clear DownloadLinkChunk models
-        $this->info('Clearing DownloadLinkChunk models...');
-        DownloadLinkChunk::truncate();
-        $this->info('DownloadLinkChunk models cleared.');
-
         // Clear DownloadLink models
         $this->info('Clearing DownloadLink models...');
         DownloadLink::truncate();
         $this->info('DownloadLink models cleared.');
+
+        DB::table('state_histories')->truncate();
 
         // Clear Download models
         $this->info('Clearing Download models...');

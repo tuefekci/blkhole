@@ -13,11 +13,12 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // $schedule->command('inspire')->hourly();
-        $schedule->command('poll:blackhole')->everyFiveSeconds();
+        $schedule->command('poll:blackhole')->everyFifteenSeconds();
         $schedule->command('log:clear')->daily();
-        $schedule->command('queue:flush')->hourly();
         $schedule->command('cache:clear')->daily();
-        $schedule->command('telescope:clear')->daily();
+        $schedule->command('queue:flush')->daily();
+        $schedule->command('queue:prune-batches')->daily();
+        $schedule->command('telescope:clear')->hourly();
     }
 
     /**

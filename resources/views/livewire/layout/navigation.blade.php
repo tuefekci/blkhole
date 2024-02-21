@@ -36,9 +36,6 @@ new class extends Component
                     <x-nav-link :href="route('downloads')" :active="request()->routeIs('downloads')" wire:navigate>
                         {{ __('Downloads') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('stream')" :active="request()->routeIs('stream')" wire:navigate>
-                        {{ __('Stream') }}
-                    </x-nav-link>
                 </div>
             </div>
 
@@ -64,6 +61,10 @@ new class extends Component
 
                         <x-dropdown-link :href="route('settings')" wire:navigate>
                             {{ __('Settings') }}
+                        </x-dropdown-link>
+
+                        <x-dropdown-link :href="route('logs')" wire:navigate>
+                            {{ __('Logs') }}
                         </x-dropdown-link>
 
                         <!-- Authentication -->
@@ -99,10 +100,6 @@ new class extends Component
 
             <x-responsive-nav-link :href="route('downloads')" :active="request()->routeIs('downloads')" wire:navigate>
                 {{ __('Downloads') }}
-            </x-responsive-nav-link>
-
-            <x-responsive-nav-link :href="route('stream')" :active="request()->routeIs('stream')" wire:navigate>
-                {{ __('Stream') }}
             </x-responsive-nav-link>
         </div>
 

@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Enums\DownloadStatus;
+use App\Jobs\DownloadJob;
+use App\Jobs\DownloadFinalize;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Asantibanez\LaravelEloquentStateMachines\Traits\HasStateMachines;
 use App\StateMachines\DownloadStatusStateMachine;
+use Illuminate\Support\Facades\Storage;
 
 class Download extends Model
 {
@@ -25,6 +29,21 @@ class Download extends Model
         // Listen for the updating event and update the updated_at timestamp
         static::updating(function ($download) {
             $download->updated_at = now();
+
+            // $download->status()->is(DownloadStatus::CANCELLED()
+        });
+
+        static::saved(function ($download) {
+
+            if( $download->status()->is(DownloadStatus::DOWNLOAD_CLOUD() ) ) {
+                //dump($download);
+                //$dispatched = DownloadJob::dispatch($download);
+            }
+
+            if( $download->status()->is(DownloadStatus::PROCESSING()) ) {
+                $dispatched = DownloadFinalize::dispatch($download);
+            }
+
         });
 
         static::created(function ($download) {
@@ -53,6 +72,15 @@ class Download extends Model
             return 0;
         }
     }
+
+	// ====================================================================================
+	// Helpers
+	// ====================================================================================
+	public static function getStatusAsString($status) {
+		$statuses = array_flip(DownloadStatus::options());
+		return $statuses[(int) $status];
+	}
+
 
     public static function getActive() {
         // Query downloads with active status

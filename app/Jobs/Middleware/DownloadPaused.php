@@ -2,6 +2,7 @@
 
 namespace App\Jobs\Middleware;
 
+use App\Models\Download;
 use Closure;
 use Illuminate\Support\Facades\Log;
 
@@ -25,7 +26,7 @@ class DownloadPaused
     public function handle(object $job, Closure $next): void
     {
         // Check if paused
-        if(DownloadManager::isPaused($this->downloadId)) {
+        if(Download::isPaused($this->downloadId)) {
             Log::info("Releasing ".get_class($job)." due to paused download. | Download ID " . $this->downloadId);
             $job->release(now()->addSeconds(60));
             return;

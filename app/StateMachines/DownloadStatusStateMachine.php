@@ -15,17 +15,17 @@ class DownloadStatusStateMachine extends StateMachine
     public function transitions(): array
     {
         return [
-            '*' => [DownloadStatus::PENDING, DownloadStatus::CANCELLED], // From any to 'approved' or 'declined'
-            DownloadStatus::PENDING => [DownloadStatus::DOWNLOAD_CLOUD],
-            DownloadStatus::DOWNLOAD_CLOUD => [DownloadStatus::DOWNLOAD_PENDING],
-            DownloadStatus::DOWNLOAD_PENDING => [DownloadStatus::DOWNLOAD_LOCAL],
-            DownloadStatus::DOWNLOAD_LOCAL => [DownloadStatus::PROCESSING],
-            DownloadStatus::PROCESSING => [DownloadStatus::COMPLETED],
+            '*' => [DownloadStatus::PENDING(), DownloadStatus::CANCELLED(), DownloadStatus::DOWNLOAD_CLOUD(), DownloadStatus::DOWNLOAD_PENDING()],
+            DownloadStatus::PENDING() => [DownloadStatus::DOWNLOAD_CLOUD()],
+            DownloadStatus::DOWNLOAD_CLOUD() => [DownloadStatus::DOWNLOAD_PENDING(), DownloadStatus::PENDING()],
+            DownloadStatus::DOWNLOAD_PENDING() => [DownloadStatus::DOWNLOAD_LOCAL(), DownloadStatus::DOWNLOAD_CLOUD()],
+            DownloadStatus::DOWNLOAD_LOCAL() => [DownloadStatus::PROCESSING(), DownloadStatus::DOWNLOAD_PENDING()],
+            DownloadStatus::PROCESSING() => [DownloadStatus::COMPLETED(), DownloadStatus::DOWNLOAD_LOCAL()],
         ];
     }
 
-    public function defaultState()
+    public function defaultState(): ?string
     {
-        return DownloadStatus::PENDING;
+        return null;
     }
 }

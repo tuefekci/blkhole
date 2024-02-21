@@ -19,17 +19,17 @@ new class extends Component
     }
 
 	public function refreshDownloads() {
-		$this->downloads = Download::latest('updated_at')->take(10)->get();
+		$this->downloads = Download::latest('updated_at')->take(5)->get();
 	}
 
 	public function pauseDownload($id) {
-		app("DownloadManager")->pauseDownload($id);
+		Download::pauseDownload($id);
 		$this->refreshDownloads();
 	}
 
 	public function deleteDownload($id) {
 		// Delete the Download model instance
-		app("DownloadManager")->deleteDownload($id);
+		Download::deleteDownload($id);
 
 		$this->deleteModal = false;
 
@@ -59,15 +59,15 @@ new class extends Component
 					<div class="whitespace-nowrap px-0 py-2 basis-full pr-4">
 
 						<div class="w-full grid grid-cols-2 gap-1 pb-1">
-							<div class="w-full ">
-								@if(strlen($download->name) > 48)
-									{{ substr($download->name, 0, 48) }}...
+							<div class="w-full" title="{{ $download->name }}">
+								@if(strlen($download->name) > 64)
+									{{ substr($download->name, 0, 64) }}...
 								@else
 									{{ $download->name }}
 								@endif
 							</div>
 							<div class="w-full text-right" title="{{ __('Debrid Status:') . " " .$download->debrid_status }}">
-								{{ __(app("DownloadManager")->getStatusAsString($download->status)) }}
+								{{ __(Download::getStatusAsString($download->status)) }}
 							</div>
 						</div>
 

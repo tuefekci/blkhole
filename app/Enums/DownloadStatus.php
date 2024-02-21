@@ -21,5 +21,6 @@ enum DownloadStatus: int
     case DOWNLOAD_LOCAL = 3;
     case PROCESSING = 4;
     case COMPLETED = 5;
-    case CANCELLED = 6;
+    case STREAM = 6;
+    case CANCELLED = 7;
 }

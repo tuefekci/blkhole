@@ -1,0 +1,59 @@
+{
+  "apps": [
+  {
+    "name": "server-worker",
+    "script": "artisan",
+    "args": ["serve", "--host=0.0.0.0", "--port=8000"],
+    "instances": "1",
+    "wait_ready": true,
+    "autorestart": true,
+    "interpreter" : "php",
+    "error_file": "storage/logs/pm2/serve/err.log",
+    "out_file": "storage/logs/pm2/serve/out.log",
+    "log_file": "storage/logs/pm2/serve/combined.log",
+    "time": true
+  },		
+  {
+    "name": "schedule-worker",
+    "script": "artisan",
+    "args": ["schedule:work"],
+    "instances": "1",
+    "wait_ready": true,
+    "autorestart": true,
+    "interpreter" : "php",
+    "error_file": "storage/logs/pm2/schedule/err.log",
+    "out_file": "storage/logs/pm2/schedule/out.log",
+    "log_file": "storage/logs/pm2/schedule/combined.log",
+    "time": true
+  },		
+  {
+    "name": "vite-worker",
+    "script": "npm",
+    "args": ["run", "dev"],
+    "instances": "1",
+    "wait_ready": true,
+    "autorestart": true,
+    "error_file": "storage/logs/pm2/npm/err.log",
+    "out_file": "storage/logs/pm2/npm/out.log",
+    "log_file": "storage/logs/pm2/npm/combined.log",
+    "time": true,
+    "exec_mode" : "fork",
+    "min_uptime": 0
+  },	
+  {
+    "name": "queue-worker",
+    "script": "artisan",
+    "args": ["queue:work", "--sleep=15", "--max-jobs=1000", "--max-time=360"],
+    "instances": "2",
+    "wait_ready": true,
+    "autorestart": true,
+    "interpreter" : "php",
+    "error_file": "storage/logs/pm2/queue/err.log",
+    "out_file": "storage/logs/pm2/queue/out.log",
+    "log_file": "storage/logs/pm2/queue/combined.log",
+    "time": true,
+    "exec_mode" : "fork",
+    "min_uptime": 0
+  }
+]
+}

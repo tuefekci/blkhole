@@ -25,7 +25,7 @@ return new class extends Migration
           
             $table->string('debrid_provider')->nullable();
             $table->string('debrid_id')->nullable();
-            $table->string('debrid_status')->nullable();
+            //$table->string('debrid_status')->nullable();
 
             $table->timestamps();
         });

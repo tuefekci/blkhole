@@ -4,6 +4,7 @@ use App\Models\Setting;
 use App\Providers\RouteServiceProvider;
 use App\Services\DebridServiceFactory;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Validate; 
@@ -34,14 +35,17 @@ new class extends Component
     public function updateAccounts(): void
     {
         Setting::updateOrCreate(['key' => 'account_0_token'], ['value' => $this->token]);
+        Cache::delete('account_0_accountStatus');
         $this->getAccountStatus();
         $this->dispatch('accounts-updated');
     }
 
     private function getAccountStatus() {
         if(!empty($this->token)) {
-            $alldebrid = DebridServiceFactory::createDebridService('alldebrid');
-            $this->accountStatus = $alldebrid->getUserStatus();
+            $this->accountStatus = Cache::remember('account_0_accountStatus', now()->addSeconds(15), function () {
+                $alldebrid = DebridServiceFactory::createDebridService('alldebrid');
+                return $alldebrid->getUserStatus();
+            });
         }
     }
 

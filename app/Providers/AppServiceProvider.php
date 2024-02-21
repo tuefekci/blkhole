@@ -3,7 +3,6 @@
 namespace App\Providers;
 
 use App\Services\BlackholeManager;
-use App\Services\DownloadManager;
 use Illuminate\Support\Facades\Lang;
 use Illuminate\Support\ServiceProvider;
 
@@ -16,17 +15,13 @@ class AppServiceProvider extends ServiceProvider
     {
         // Telescope
         //if ($this->app->environment('local')) {
-            $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
-            $this->app->register(TelescopeServiceProvider::class);
+            //$this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
+            //$this->app->register(TelescopeServiceProvider::class);
         //}
 
         //
         $this->app->singleton("BlackholeManager", function ($app) {
             return new BlackholeManager();
-        });
-
-        $this->app->singleton("DownloadManager", function ($app) {
-            return new DownloadManager();
         });
 
     }

@@ -52,6 +52,66 @@ use App\Models\Download;
                 <div class="text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-700 pb-2">
                     {{ __("Details") }}
                 </div>
+
+                <div class="pt-2">
+
+                    <div class="grid grid-cols-4 gap-1">
+
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Status") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400">{{ __(Download::getStatusAsString($download->status)) }}</div>
+                        </div>
+                    
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Paused") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400">{{ $download->paused ? __('Yes') : __('No') }}</div>
+                        </div>
+
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Created") }}</div>
+                            <div class="font-light text-gray-500 dark:text-gray-400">{{ $download->created_at }}</div>
+                        </div>
+                        
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Updated") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400">{{ $download->updated_at }}</div>
+                        </div>
+
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Debird Provider") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400">{{ __($download->debrid_provider) }}</div>
+                        </div>
+
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Debrid Id") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400">{{ $download->debrid_id }}</div>
+                        </div>
+
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Source Type") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400 ">{{ __($download->src_type) }}</div>
+                        </div>
+
+                        <div class="pt-2">
+                            <div class="pb-1 font-semibold leading-none text-gray-900 dark:text-white">{{ __("Source Path") }}</div>
+                            <div class=" font-light text-gray-500 dark:text-gray-400 truncate" title="{{ $download->src_path }}">{{ $download->src_path }}</div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+            </div>
+        </div>
+    </div>
+
+    <div class="pt-6">
+        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+            <div class="p-2 sm:p-4 bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                <div class="text-gray-900 dark:text-gray-100 border-b border-gray-300 dark:border-gray-700 pb-2">
+                    {{ __("Files") }}
+                </div>
             </div>
         </div>
     </div>
@@ -73,7 +133,7 @@ use App\Models\Download;
                     {{ __("Status History") }}
                 </div>
 
-                <div class="relative overflow-x-auto pt-2">
+                <div class="relative max-h-96 overflow-x-auto pt-2">
                     <table class="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
                         <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
                             <tr>
@@ -91,20 +151,20 @@ use App\Models\Download;
                                 </th>
                             </tr>
                         </thead>
-                        <tbody>
-                        @foreach($download->status()->history()->get() as $stateHistory)
+                        <tbody class="table-auto overflow-scroll">
+                        @foreach($download->status()->history()->orderByDesc('created_at')->get() as $stateHistory)
                             <tr class="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                                <td class="px-5 py-3 text-sm font-medium text-gray-900">
+                                <td class="px-5 py-3 text-sm font-medium">
                                     {{ $stateHistory->created_at }}
                                 </td>
                                 <td class="px-5 py-3 text-sm text-gray-500">
-                                    {{ $stateHistory->from ?? 'N/A' }}
+                                    {{ __(Download::getStatusAsString($stateHistory->from)) ?? __('N/A') }}
                                 </td>
                                 <td class="px-5 py-3 text-sm text-gray-500">
-                                    {{ $stateHistory->to }}
+                                    {{ __(Download::getStatusAsString($stateHistory->to)) }}
                                 </td>
                                 <td class="px-5 py-3 text-sm text-gray-500">
-                                    {{ $stateHistory->getCustomProperty('comments') ?? 'N/A' }}
+                                    {{ __($stateHistory->getCustomProperty('comments')) ?? __('N/A') }}
                                 </td>
                             </tr>
                         @endforeach
