@@ -1,7 +1,0 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-[type='file'] {
-    border-width: 1px;
-}
