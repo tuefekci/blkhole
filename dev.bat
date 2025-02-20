@@ -1,0 +1,1 @@
+bash sail up -d
