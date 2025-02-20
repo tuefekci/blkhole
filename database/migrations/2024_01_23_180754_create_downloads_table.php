@@ -14,10 +14,10 @@ return new class extends Migration
         Schema::create('downloads', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->integer('status')->default(0);
+            $table->integer('status')->default(0)->nullable();
             $table->boolean('paused')->default(false);
-            
-            $table->text('src_path')->unique();
+        
+            $table->text('src_path');
             $table->string('src_type');
 
             //$table->text('dst_path')->unique()->nullable();
@@ -29,6 +29,9 @@ return new class extends Migration
 
             $table->timestamps();
         });
+
+        // Add the unique index with a prefix of the src_path column
+        DB::statement('ALTER TABLE downloads ADD UNIQUE src_path_prefix_unique (src_path(191))');
     }
 
     /**

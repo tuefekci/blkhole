@@ -52,13 +52,12 @@ class DownloadChunk implements ShouldQueue
     {
         return [(new DownloadPaused($this->link->download->id))];
     }
+    
     /**
      * Execute the job.
      */
     public function handle(): void
     {
-
         sleep(1);
-
     }
 }

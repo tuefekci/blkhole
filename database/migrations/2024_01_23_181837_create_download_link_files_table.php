@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->unsignedBigInteger('size');
-            $table->foreignId('download_link_id')->constrained();
+            $table->foreignId('download_link_id')->constrained()->nullable();
             $table->timestamps();
         });
     }

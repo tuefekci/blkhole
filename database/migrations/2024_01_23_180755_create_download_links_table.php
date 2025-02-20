@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('download_links', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('download_id')->constrained();
-            $table->unsignedBigInteger('batch_id')->nullable();
+            $table->foreignId('download_id')->constrained()->nullable();
+            $table->string('batch_id')->nullable();
             $table->string('filename');
             $table->string('url');
             $table->timestamps();

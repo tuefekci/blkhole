@@ -22,6 +22,27 @@ class Download extends Model
         'status' => DownloadStatusStateMachine::class
     ];
 
+    private $pathWeb;
+
+
+    function __construct() {
+        parent::__construct();
+
+        try {
+			// Create necessary directories based on configuration
+			Storage::makeDirectory( config('blkhole.paths.blackhole') );
+	
+			// Set paths for blackhole and downloads web interfaces
+			$this->pathWeb = config('blkhole.paths.blackhole') . DIRECTORY_SEPARATOR . "web" . DIRECTORY_SEPARATOR;
+	
+			// Ensure the existence of specific directories
+			Storage::makeDirectory($this->pathWeb);
+		} catch (\Exception $e) {
+			// Log any errors that occur during initialization
+			Log::error("Error in constructor: " . $e->getMessage());
+		}
+    }
+
     protected static function boot()
     {
         parent::boot();
@@ -29,25 +50,6 @@ class Download extends Model
         // Listen for the updating event and update the updated_at timestamp
         static::updating(function ($download) {
             $download->updated_at = now();
-
-            // $download->status()->is(DownloadStatus::CANCELLED()
-        });
-
-        static::saved(function ($download) {
-
-            if( $download->status()->is(DownloadStatus::DOWNLOAD_CLOUD() ) ) {
-                //dump($download);
-                //$dispatched = DownloadJob::dispatch($download);
-            }
-
-            if( $download->status()->is(DownloadStatus::PROCESSING()) ) {
-                $dispatched = DownloadFinalize::dispatch($download);
-            }
-
-        });
-
-        static::created(function ($download) {
-            //ProcessDownload::dispatch($download);
         });
     }
 
@@ -122,32 +124,119 @@ class Download extends Model
 		$download->delete();
     }
 
-	public static function saveDownloadPart($downloadId, $linkId,  $index, $data) {
-		Log::debug("saveDownloadPart: " . $downloadId . " - " . $linkId . " - " . $index . " ");
+    public function isValidExtension($file): string {
+		// Define the valid file extensions
+		$validExtensions = ['ddl', 'torrent', 'magnet'];
+
+		// Get the extension of the file
+		$extension = pathinfo($file, PATHINFO_EXTENSION);
+
+		// Check if the extension is valid
+		return in_array($extension, $validExtensions);
 	}
-    
-    public static function createChunksMeta($size)
-    {
-        // Retrieve chunk size from settings
-        $chunkSize = (int) Setting::get('chunkSize');
-        $chunkCount = (int) ceil($size / $chunkSize);
 
-        $chunks = [];
-        for ($i = 0; $i < $chunkCount; $i++) {
-            $start = $i * $chunkSize;
-            $end = (($i + 1) * $chunkSize) - 1;
+    public static function addMagnet($magnetUrl) {
+		try {
+			// Check if the magnet URL starts with 'magnet:'
+			if (\strpos($magnetUrl, 'magnet:') === false) {
+				throw new \Exception("Invalid magnet URL: $magnetUrl");
+			}
+	
+			$magnetRaw = $magnetUrl;
+	
+			// If the magnet URL contains percent-encoded characters, decode them
+			if(preg_match('~%[0-9A-F]{2}~i', $magnetRaw)) {
+				$magnetRaw = urldecode($magnetRaw);
+			}
+	
+			// Extract hash, filename, and trackers from the magnet URL
+			if (!preg_match('#magnet:\?xt=urn:btih:(?<hash>.*?)&dn=(?<filename>.*?)&tr=(?<trackers>.*?)$#', $magnetRaw, $magnet)) {
+				throw new \Exception("Invalid magnet URL format: $magnetUrl");
+			}
+	
+			// Check if filename is present and is a string
+			if(!empty($magnet['filename']) && is_string($magnet['filename'])) {
+				// Save the magnet URL to storage with the filename
+				Storage::put($this->pathWeb . $magnet['filename'] . ".magnet", $magnetRaw);
+				return true;
+			} else {
+				// Throw exception if filename is missing or not a string
+				throw new \Exception("Missing or invalid filename in magnet URL: $magnetUrl");
+			}
+		} catch (\Exception $e) {
+			// Log the error and return false
+			Log::error("Error adding magnet URL: " . $e->getMessage());
+			return false;
+		}
+	}
 
-            if ($i == $chunkCount - 1) {
-                $end = $size;
-            }
+	public static function addTorrent($torrentPath, $torrentName) {
 
-            $chunks[] = (object) [
-                'start' => $start,
-                'end' => $end
-            ];
-        }
+		// Define the allowed file extensions for torrent files
+		$allowedExtensions = ['torrent'];
 
-        return $chunks;
-    }
+		try {
+			// Check if the file exists
+			if (!Storage::exists($torrentPath)) {
+				throw new \Exception("Torrent file not found: $torrentPath");
+			}
+	
+			// Check if the file has a valid MIME type for a torrent file
+			$mimeType = Storage::mimeType($torrentPath);
+			if ($mimeType !== 'application/x-bittorrent') {
+				throw new \Exception("Invalid torrent file format: $torrentPath");
+			}
+
+			// Extract the file extension using pathinfo
+			$fileInfo = pathinfo($torrentPath);
+
+			// Check if the file extension is in the list of allowed extensions
+			if (!in_array(strtolower($fileInfo['extension']), $allowedExtensions)) {
+				throw new \Exception("Invalid torrent file format: $torrentPath");
+			}
+
+			$nameInfo = pathinfo($torrentName);
+
+			// Additional checks or actions can be added here if needed
+			// ...
+	
+			// If all checks pass, you can proceed with your logic
+			Storage::move($torrentPath, $this->pathWeb . $nameInfo['filename'] . "." .$fileInfo['extension']);
+			return true;
+	
+		} catch (\Exception $e) {
+			// Log the error and return false
+			Log::error("Error adding torrent file: " . $e->getMessage());
+			return false;
+		}
+	}
+
+	public static function addDDL($ddlUrl) {
+		try {
+			// Validate the URL format
+			if (!filter_var($ddlUrl, FILTER_VALIDATE_URL)) {
+				throw new \Exception("Invalid URL format: $ddlUrl");
+			}
+	
+			// Check if the URL starts with 'http://' or 'https://'
+			if (!preg_match('/^https?:\/\//', $ddlUrl)) {
+				throw new \Exception("URL must start with 'http://' or 'https://': $ddlUrl");
+			}
+	
+			// Additional checks or actions can be added here if needed
+			// ...
+	
+	
+
+			// If all checks pass, you can proceed with your logic
+			Storage::put($this->pathWeb . base64_encode(UrlHelper::cleanUrl($ddlUrl)).".ddl", $ddlUrl);
+			return true;
+	
+		} catch (\Exception $e) {
+			// Log the error and return false
+			Log::error("Error adding DDL URL: " . $e->getMessage());
+			return false;
+		}
+	}
 
 }

@@ -26,3 +26,5 @@ storage/framework/views/
 storage/framework/sessions/
 storage/app/blkhole/
 storage/app/livewire-tmp/
+queue_failed
+queue

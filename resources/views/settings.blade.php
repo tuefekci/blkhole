@@ -2,13 +2,16 @@
 
 use App\Helpers\NumberHelper;
 use Illuminate\Support\Facades\Cache;
-use JalalLinuX\Pm2\Pm2;
+//use JalalLinuX\Pm2\Pm2;
 
     //dump(pm2()->version());
 
+    /*
     $services = Cache::remember('services_list', now()->addSeconds(30), function () {
         return pm2()->list();
-    });
+    });*/
+
+    $services = [];
 ?>
 
 <x-app-layout>

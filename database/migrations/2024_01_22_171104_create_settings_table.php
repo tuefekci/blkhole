@@ -24,6 +24,15 @@ return new class extends Migration
         Setting::create(['key' => 'bandwidth', 'value' => '524288']);
         Setting::create(['key' => 'chunkSize', 'value' => '524288']);
         Setting::create(['key' => 'paused', 'value' => 'false']);
+
+
+        if(env('ALLDEBRID_TOKEN')) {
+            Setting::create(['key' => 'account_0_token', 'value' => env('ALLDEBRID_TOKEN')]);
+        }
+
+
+
+
     }
 
     /**
